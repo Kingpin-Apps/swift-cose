@@ -3,7 +3,7 @@ import CryptoKit
 import OrderedCollections
 import PotentCBOR
 import CryptoSwift
-@_implementationOnly import OpenSSL
+import OpenSSL
 
 
 // MARK: - Curve25519.KeyAgreement.PublicKey Extensions

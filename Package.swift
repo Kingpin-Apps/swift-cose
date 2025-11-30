@@ -6,10 +6,11 @@ import PackageDescription
 let package = Package(
     name: "SwiftCOSE",
     platforms: [
-      .iOS(.v14),
+      .iOS(.v16),
       .macOS(.v13),
-      .watchOS(.v7),
-      .tvOS(.v14),
+      .watchOS(.v9),
+      .tvOS(.v16),
+      .visionOS(.v1)
     ],
     products: [
         // Products define the executables and libraries a package produces, making them visible to other packages.
@@ -26,7 +27,7 @@ let package = Package(
         .package(url: "https://github.com/krzyzanowskim/OpenSSL-Package.git", .upToNextMinor(from: "3.3.2000")),
         .package(url: "https://github.com/Sajjon/K1.git", from: "0.3.9"),
         .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", .upToNextMinor(from: "1.9.0")),
-        .package(url: "https://github.com/Kingpin-Apps/swift-curve448.git", from: "0.1.2")
+        .package(url: "https://github.com/Kingpin-Apps/swift-curve448.git", from: "0.1.3")
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
