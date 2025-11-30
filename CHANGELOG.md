@@ -1,3 +1,9 @@
+## 0.1.15 (2025-11-29)
+
+### Fix
+
+- set compatible versions and update swift-curve448 version
+
 ## 0.1.14 (2025-08-24)
 
 ### Fix
