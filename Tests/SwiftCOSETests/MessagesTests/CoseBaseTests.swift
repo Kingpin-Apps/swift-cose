@@ -164,9 +164,10 @@ struct CoseBaseTests {
             ContentType(): "application/cbor"
         ])
         
-        let hdrRepr = coseBase.hdrRepr
-        
-        #expect(hdrRepr != nil, "Header representation should not be nil.")
+        let hdrRepr = coseBase.hdrRepr()
+
+        #expect(!hdrRepr.phdr.isEmpty, "Protected header representation should not be empty.")
+        #expect(!hdrRepr.uhdr.isEmpty, "Unprotected header representation should not be empty.")
     }
         
 }

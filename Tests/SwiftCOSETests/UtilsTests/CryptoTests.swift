@@ -1,7 +1,7 @@
 import Testing
 import Foundation
 import CryptoKit
-import K1
+import P256K
 import CryptoSwift
 import SwiftCurve448
 @testable import SwiftCOSE
@@ -11,71 +11,80 @@ struct CryptoTests {
     // MARK: - Key Generation Tests
     
     @Test func testSECP256K1() async throws {
-        let privateKeyAgreementKey: K1.KeyAgreement.PrivateKey = try generateKeyAgreementPrivateKey(curve: .SECP256K1)
-        let privateSigningKey: K1.ECDSA.PrivateKey = try generateSigningPrivateKey(curve: .SECP256K1)
-        
-        let publicKeyAgreementKeyCompact: K1.KeyAgreement.PublicKey = try deriveKeyAgreementPublicKeyCompact(
-            from: privateKeyAgreementKey.publicKey.compressedRepresentation,
+        let privateKeyAgreementKey: P256K.KeyAgreement.PrivateKey = try generateKeyAgreementPrivateKey(curve: .SECP256K1)
+        let privateSigningKey: P256K.Signing.PrivateKey = try generateSigningPrivateKey(curve: .SECP256K1)
+
+        // P256K notes:
+        //   - KeyAgreement.PrivateKey  exposes `rawRepresentation` (32 bytes)
+        //   - Signing.PrivateKey       exposes `dataRepresentation` (32 bytes) — there's no
+        //                               `rawRepresentation` on this side
+        //   - PublicKey                exposes `dataRepresentation` (compressed, 33 bytes by default)
+        //                               and `uncompressedRepresentation` (uncompressed, 65 bytes)
+        //                               but no `rawRepresentation` or `compressedRepresentation`.
+
+        let publicKeyAgreementKeyCompact: P256K.KeyAgreement.PublicKey = try deriveKeyAgreementPublicKeyCompact(
+            from: privateKeyAgreementKey.publicKey.dataRepresentation,
             curve: .SECP256K1
-        ) as K1.KeyAgreement.PublicKey
-        let publicSigningKeyCompact: K1.ECDSA.PublicKey = try deriveSigningPublicKeyCompact(
-            from: privateSigningKey.publicKey.compressedRepresentation,
+        ) as P256K.KeyAgreement.PublicKey
+        let publicSigningKeyCompact: P256K.Signing.PublicKey = try deriveSigningPublicKeyCompact(
+            from: privateSigningKey.publicKey.dataRepresentation,
             curve: .SECP256K1
         )
-        
-        let derivedPrivateKeyAgreementKey: K1.KeyAgreement.PrivateKey = try deriveKeyAgreementPrivateKey(
+
+        let derivedPrivateKeyAgreementKey: P256K.KeyAgreement.PrivateKey = try deriveKeyAgreementPrivateKey(
             from: privateKeyAgreementKey.rawRepresentation,
             curve: .SECP256K1
         )
-        let derivedPrivateKeySigningKey: K1.ECDSA.PrivateKey = try deriveSigningPrivateKey(
-            from: privateSigningKey.rawRepresentation,
+        let derivedPrivateKeySigningKey: P256K.Signing.PrivateKey = try deriveSigningPrivateKey(
+            from: privateSigningKey.dataRepresentation,
             curve: .SECP256K1
         )
-        
+
         let (curve1, x1, y1, d1) = try deriveNumbers(from: privateKeyAgreementKey)
         let (curve2, x2, y2, d2) = try deriveNumbers(from: privateKeyAgreementKey.publicKey)
-        
-        let derivedPublicKeyAgreementKey: K1.KeyAgreement.PublicKey = try derivePublicKeyFromNumbers(
+
+        let derivedPublicKeyAgreementKey: P256K.KeyAgreement.PublicKey = try derivePublicKeyFromNumbers(
             curve: curve1,
             x: x1,
             y: y1!
         )
-            
-        
+
         let (xKA, yKA) = try deriveKeyAgreementPublicNumbers(
             from: privateKeyAgreementKey.rawRepresentation,
             curve: .SECP256K1
         )
         let (xS, yS) = try deriveSigningPublicNumbers(
-            from: privateSigningKey.rawRepresentation,
+            from: privateSigningKey.dataRepresentation,
             curve: .SECP256K1
         )
-        
+
         let (xKAc, yKAc) = try deriveKeyAgreementPublicNumbersCompact(
-            from: privateKeyAgreementKey.publicKey.compressedRepresentation,
+            from: privateKeyAgreementKey.publicKey.dataRepresentation,
             curve: .SECP256K1
         )
         let (xSc, ySc) = try deriveSigningPublicNumbersCompact(
-            from: privateSigningKey.publicKey.compressedRepresentation,
+            from: privateSigningKey.publicKey.dataRepresentation,
             curve: .SECP256K1
         )
-        
+
         #expect(privateKeyAgreementKey.rawRepresentation.count == 32)
-        #expect(privateSigningKey.rawRepresentation.count == 32)
-        
-        #expect(publicKeyAgreementKeyCompact.rawRepresentation == derivedPublicKeyAgreementKey.rawRepresentation)
-        
-        #expect(publicKeyAgreementKeyCompact.rawRepresentation == privateKeyAgreementKey.publicKey.rawRepresentation)
-        #expect(publicSigningKeyCompact.rawRepresentation.count == privateSigningKey.publicKey.rawRepresentation.count)
-        
+        #expect(privateSigningKey.dataRepresentation.count == 32)
+
+        // Use uncompressedRepresentation to compare PublicKey bytes; that always returns 65 bytes
+        // regardless of whether the key is internally stored compressed or uncompressed.
+        #expect(publicKeyAgreementKeyCompact.uncompressedRepresentation == derivedPublicKeyAgreementKey.uncompressedRepresentation)
+
+        #expect(publicKeyAgreementKeyCompact.uncompressedRepresentation == privateKeyAgreementKey.publicKey.uncompressedRepresentation)
+        #expect(publicSigningKeyCompact.uncompressedRepresentation.count == privateSigningKey.publicKey.uncompressedRepresentation.count)
+
         #expect(privateKeyAgreementKey.rawRepresentation == derivedPrivateKeyAgreementKey.rawRepresentation)
-        #expect(privateSigningKey.rawRepresentation == derivedPrivateKeySigningKey.rawRepresentation)
-        
+        #expect(privateSigningKey.dataRepresentation == derivedPrivateKeySigningKey.dataRepresentation)
+
         #expect(xKA == xKAc)
         #expect(yKA == yKAc)
         #expect(xS == xSc)
         #expect(yS == ySc)
-        
+
         #expect(curve1 == .SECP256K1)
         #expect(curve2 == .SECP256K1)
         #expect(x1 == xKAc)

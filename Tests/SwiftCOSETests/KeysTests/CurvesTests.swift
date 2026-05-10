@@ -2,7 +2,7 @@ import Testing
 import Foundation
 import UncommonCrypto
 import CryptoKit
-import K1
+import P256K
 @testable import SwiftCOSE
 
 struct CurveTypeTests {
@@ -17,21 +17,21 @@ struct CurveTypeTests {
     
     // Test raw values of CurveType
     @Test func testCurveTypeRawValues() async throws {
-        #expect(CurveType.SECP256K1 != nil)
-        #expect(CurveType.SECP256R1 != nil)
-        #expect(CurveType.SECP384R1 != nil)
-        #expect(CurveType.SECP521R1 != nil)
-        #expect(CurveType.ED25519 != nil)
-        #expect(CurveType.ED448 != nil)
-        #expect(CurveType.X25519 != nil)
-        #expect(CurveType.X448 != nil)
+        #expect(CurveType.SECP256K1.rawValue == 0)
+        #expect(CurveType.SECP256R1.rawValue == 1)
+        #expect(CurveType.SECP384R1.rawValue == 2)
+        #expect(CurveType.SECP521R1.rawValue == 3)
+        #expect(CurveType.ED25519.rawValue == 4)
+        #expect(CurveType.ED448.rawValue == 5)
+        #expect(CurveType.X25519.rawValue == 6)
+        #expect(CurveType.X448.rawValue == 7)
     }
-    
+
     // Test raw values of KeyType
     @Test func testKeyTypeRawValues() async throws {
-        #expect(KeyType.ktyEC2 != nil)
-        #expect(KeyType.ktyOKP != nil)
-        #expect(KeyType.none != nil)
+        #expect(KeyType.ktyEC2.rawValue == 0)
+        #expect(KeyType.ktyOKP.rawValue == 1)
+        #expect(KeyType.none.rawValue == 2)
     }
     
     // MARK: - Individual CoseCurve Tests

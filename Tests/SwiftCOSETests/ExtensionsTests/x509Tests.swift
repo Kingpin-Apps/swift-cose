@@ -155,7 +155,7 @@ struct X509Tests {
         
         let chain = try X5Chain(certData: certificate)
         
-        #expect(chain.certChain != nil)
+        #expect(chain.certChain.subject.description.isEmpty == false)
     }
     
     @Test func testX5ChainVerificationPasses() async throws {
@@ -165,7 +165,7 @@ struct X509Tests {
         let certificate = try Data(contentsOf: URL(fileURLWithPath: filePath))
         let chain = try X5Chain(certData: certificate, verify: true)
         
-        #expect(chain.certChain != nil)
+        #expect(chain.certChain.subject.description.isEmpty == false)
     }
     
     @Test func testX5ChainVerificationFails() async throws {

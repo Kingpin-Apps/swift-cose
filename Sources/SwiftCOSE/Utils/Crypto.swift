@@ -1,6 +1,6 @@
 import Foundation
 import CryptoKit
-import K1
+import P256K
 import CryptoSwift
 import SwiftCurve448
 
@@ -13,7 +13,7 @@ public func derivePublicKeyFromNumbers<T>(curve: CurveType, x: Data, y: Data) th
     do {
         switch curve {
             case .SECP256K1:
-                return try K1.KeyAgreement.PublicKey(x963Representation: x963Representation) as! T
+                return try P256K.KeyAgreement.PublicKey(x963Representation: x963Representation) as! T
             case .SECP256R1:
                 return try P256.KeyAgreement.PublicKey(x963Representation: x963Representation) as! T
             case .SECP384R1:
@@ -24,7 +24,7 @@ public func derivePublicKeyFromNumbers<T>(curve: CurveType, x: Data, y: Data) th
                 throw CoseError.invalidAlgorithm("Unsupported curve")
         }
     } catch {
-        let error = error as! CryptoKitError
+        let error = error as! CryptoKit.CryptoKitError
         throw CoseError.invalidKey(
             "Error deriving public key for \(curve): \(error.localizedDescription)."
         )
@@ -35,13 +35,13 @@ public func getXY(from key: Any) throws -> (x: Data, y: Data?) {
     var x: Data?
     var y: Data?
     
-    if let privateKey = key as? K1.KeyAgreement.PrivateKey {
-        let keyData = privateKey.publicKey.x963Representation.dropFirst()
+    if let privateKey = key as? P256K.KeyAgreement.PrivateKey {
+        let keyData = privateKey.publicKey.uncompressedRepresentation.dropFirst()
         x = keyData.prefix(32)
         y = keyData.suffix(32)
-    } else if let privateKey = key as? K1.ECDSA.PrivateKey {
-        let keyData = privateKey.publicKey.x963Representation.dropFirst()
-        x = keyData.prefix(32) 
+    } else if let privateKey = key as? P256K.Signing.PrivateKey {
+        let keyData = privateKey.publicKey.uncompressedRepresentation.dropFirst()
+        x = keyData.prefix(32)
         y = keyData.suffix(32)
     }
     else if let privateKey = key as? P256.KeyAgreement.PrivateKey {
@@ -79,12 +79,12 @@ public func getXY(from key: Any) throws -> (x: Data, y: Data?) {
     } else if let privateKey = key as? Curve25519.Signing.PrivateKey {
         x = privateKey.publicKey.rawRepresentation
     }
-    else if let publicKey = key as? K1.KeyAgreement.PublicKey {
-        let keyData = publicKey.x963Representation.dropFirst()
+    else if let publicKey = key as? P256K.KeyAgreement.PublicKey {
+        let keyData = publicKey.uncompressedRepresentation.dropFirst()
         x = keyData.prefix(32)
         y = keyData.suffix(32)
-    } else if let publicKey = key as? K1.ECDSA.PublicKey {
-        let keyData = publicKey.x963Representation.dropFirst()
+    } else if let publicKey = key as? P256K.Signing.PublicKey {
+        let keyData = publicKey.uncompressedRepresentation.dropFirst()
         x = keyData.prefix(32)
         y = keyData.suffix(32)
     }
@@ -137,14 +137,16 @@ public func deriveNumbers(from key: Any) throws -> (curve: CurveType, x: Data, y
     var d: Data?
     var curve: CurveType?
     
-    if let privateKey = key as? K1.KeyAgreement.PrivateKey {
+    if let privateKey = key as? P256K.KeyAgreement.PrivateKey {
         curve = .SECP256K1
         (x, y) = try getXY(from: privateKey)
         d = privateKey.rawRepresentation
-    } else if let privateKey = key as? K1.ECDSA.PrivateKey {
-        curve = .SECP256R1
+    } else if let privateKey = key as? P256K.Signing.PrivateKey {
+        // Fix from prior K1-based version: this branch is secp256k1 (the underlying curve of
+        // both K1 and P256K's Signing namespace), not secp256r1.
+        curve = .SECP256K1
         (x, y) = try getXY(from: privateKey)
-        d = privateKey.rawRepresentation
+        d = privateKey.dataRepresentation
     }
     else if let privateKey = key as? P256.KeyAgreement.PrivateKey {
         curve = .SECP256R1
@@ -191,10 +193,10 @@ public func deriveNumbers(from key: Any) throws -> (curve: CurveType, x: Data, y
         (x, y) = try getXY(from: privateKey)
         d = privateKey.rawRepresentation
     }
-    else if let publicKey = key as? K1.KeyAgreement.PublicKey {
+    else if let publicKey = key as? P256K.KeyAgreement.PublicKey {
         curve = .SECP256K1
         (x, y) = try getXY(from: publicKey)
-    } else if let publicKey = key as? K1.ECDSA.PublicKey {
+    } else if let publicKey = key as? P256K.Signing.PublicKey {
         curve = .SECP256K1
         (x, y) = try getXY(from: publicKey)
     }
@@ -246,7 +248,7 @@ public func deriveKeyAgreementPublicNumbersCompact(from d: Data, curve: CurveTyp
     
     switch curve {
         case .SECP256K1:
-            let publicKey: K1.KeyAgreement.PublicKey = try deriveKeyAgreementPublicKeyCompact(
+            let publicKey: P256K.KeyAgreement.PublicKey = try deriveKeyAgreementPublicKeyCompact(
                 from: d,
                 curve: curve
             )
@@ -295,7 +297,7 @@ public func deriveSigningPublicNumbersCompact(from d: Data, curve: CurveType) th
     
     switch curve {
         case .SECP256K1:
-            let publicKey: K1.ECDSA.PublicKey = try deriveSigningPublicKeyCompact(
+            let publicKey: P256K.Signing.PublicKey = try deriveSigningPublicKeyCompact(
                 from: d,
                 curve: curve
             )
@@ -344,7 +346,7 @@ public func deriveKeyAgreementPublicNumbers(from d: Data, curve: CurveType) thro
     
     switch curve {
         case .SECP256K1:
-            let privateKey: K1.KeyAgreement.PrivateKey = try deriveKeyAgreementPrivateKey(
+            let privateKey: P256K.KeyAgreement.PrivateKey = try deriveKeyAgreementPrivateKey(
                 from: d,
                 curve: curve
             )
@@ -393,7 +395,7 @@ public func deriveSigningPublicNumbers(from d: Data, curve: CurveType) throws ->
     
     switch curve {
         case .SECP256K1:
-            let privateKey: K1.ECDSA.PrivateKey = try deriveSigningPrivateKey(
+            let privateKey: P256K.Signing.PrivateKey = try deriveSigningPrivateKey(
                 from: d,
                 curve: curve
             )
@@ -439,7 +441,7 @@ public func deriveKeyAgreementPrivateKey<T>(from key: Data, curve: CurveType) th
     do {
         switch curve {
             case .SECP256K1:
-                return try! K1.KeyAgreement.PrivateKey(rawRepresentation: key) as! T
+                return try! P256K.KeyAgreement.PrivateKey(dataRepresentation: key) as! T
             case .SECP256R1:
                 return try! P256.KeyAgreement.PrivateKey(rawRepresentation: key) as! T
             case .SECP384R1:
@@ -464,7 +466,7 @@ public func deriveSigningPrivateKey<T>(from key: Data, curve: CurveType) throws 
     do {
         switch curve {
             case .SECP256K1:
-                return try! K1.ECDSA.PrivateKey(rawRepresentation: key) as! T
+                return try! P256K.Signing.PrivateKey(dataRepresentation: key) as! T
             case .SECP256R1:
                 return try! P256.Signing.PrivateKey(rawRepresentation: key) as! T
             case .SECP384R1:
@@ -489,7 +491,7 @@ public func deriveKeyAgreementPublicKeyCompact<T>(from key: Data, curve: CurveTy
     do {
         switch curve {
             case .SECP256K1:
-                return try K1.KeyAgreement.PublicKey(compressedRepresentation: key) as! T
+                return try P256K.KeyAgreement.PublicKey(dataRepresentation: key, format: .compressed) as! T
             case .SECP256R1:
                 return try P256.KeyAgreement.PublicKey(compressedRepresentation: key) as! T
             case .SECP384R1:
@@ -516,7 +518,7 @@ public func deriveSigningPublicKeyCompact<T>(from key: Data, curve: CurveType) t
     do  {
         switch curve {
             case .SECP256K1:
-                return try K1.ECDSA.PublicKey(compressedRepresentation: key) as! T
+                return try P256K.Signing.PublicKey(dataRepresentation: key, format: .compressed) as! T
             case .SECP256R1:
                 return try P256.Signing.PublicKey(compressedRepresentation: key) as! T
             case .SECP384R1:
@@ -540,7 +542,7 @@ public func deriveSigningPublicKeyCompact<T>(from key: Data, curve: CurveType) t
 public func generateKeyAgreementPrivateKey<T>(curve: CurveType) throws -> T {
     switch curve {
         case .SECP256K1:
-            return K1.KeyAgreement.PrivateKey() as! T
+            return try P256K.KeyAgreement.PrivateKey() as! T
         case .SECP256R1:
             return P256.KeyAgreement.PrivateKey() as! T
         case .SECP384R1:
@@ -559,7 +561,7 @@ public func generateKeyAgreementPrivateKey<T>(curve: CurveType) throws -> T {
 public func generateSigningPrivateKey<T>(curve: CurveType) throws -> T {
     switch curve {
         case .SECP256K1:
-            return K1.ECDSA.PrivateKey() as! T
+            return try P256K.Signing.PrivateKey() as! T
         case .SECP256R1:
             return P256.Signing.PrivateKey() as! T
         case .SECP384R1:

@@ -107,8 +107,8 @@ struct CoseRecipientTests {
         
         let recipients = [keyWrap1, keyWrap2]
         let result = try CoseRecipient.verifyRecipients(recipients)
-        
-        #expect(result != nil)
+
+        #expect(!result.isEmpty)
         #expect(result.contains("KeyWrap"))
         #expect(result.count == 1)
     }

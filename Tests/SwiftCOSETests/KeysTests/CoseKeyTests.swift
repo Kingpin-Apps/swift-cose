@@ -38,8 +38,7 @@ struct CoseKeyTests {
         ] as [AnyHashable : Any]
 
         let coseKey = try CoseKey.fromDictionary(coseKeyDict)
-        
-        #expect(coseKey != nil)
+
         #expect(coseKey.kty == KtyOKP())
     }
     
@@ -115,10 +114,8 @@ struct CoseKeyTests {
         
         let decodedKey = try CoseKey.decode(Data(hex: key)) as! OKPKey
         let verificationKey = decodedKey.store[OKPKpX()] as! Data
-        
-        #expect(decodedKey != nil)
+
         #expect(decodedKey.kty == KtyOKP())
-        #expect(verificationKey != nil)
         #expect(verificationKey == decodedKey.x)
     }
     

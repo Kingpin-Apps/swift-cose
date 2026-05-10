@@ -1,7 +1,7 @@
 import Foundation
 import UncommonCrypto
 import CryptoKit
-import K1
+import P256K
 import SwiftCurve448
 
 public enum CurveType: Int, CaseIterable, Sendable {

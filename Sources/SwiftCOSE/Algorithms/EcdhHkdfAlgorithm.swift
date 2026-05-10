@@ -1,5 +1,5 @@
 import Foundation
-import K1
+import P256K
 import CryptoKit
 
 public class EcdhHkdfAlgorithm: CoseAlgorithm {
@@ -31,12 +31,12 @@ public class EcdhHkdfAlgorithm: CoseAlgorithm {
         
         switch curve.curveType {
             case .SECP256K1:
-                let privateKeyData = try K1.KeyAgreement.PrivateKey(
-                    rawRepresentation: dValue
+                let privateKeyData = try P256K.KeyAgreement.PrivateKey(
+                    dataRepresentation: dValue
                 )
-                let publicKeyData = try K1.KeyAgreement.PublicKey(x963Representation: x963Representation)
-                
-                let sharedSecret = try privateKeyData.sharedSecretFromKeyAgreement(with: publicKeyData)
+                let publicKeyData = try P256K.KeyAgreement.PublicKey(x963Representation: x963Representation)
+
+                let sharedSecret = privateKeyData.sharedSecretFromKeyAgreement(with: publicKeyData)
                 return sharedSecret.withUnsafeBytes { Data($0) }
             case .SECP256R1:
                 let privateKeyData = try P256.KeyAgreement.PrivateKey(rawRepresentation: dValue)
@@ -67,13 +67,13 @@ public class EcdhHkdfAlgorithm: CoseAlgorithm {
         
         switch self.hashFunction {
             case .sha256:
-                hkdf = HKDF<SHA256>.deriveKey(
+                hkdf = HKDF<CryptoKit.SHA256>.deriveKey(
                     inputKeyMaterial: SymmetricKey(data: sharedSecret),
                     info: try context.encode(),
                     outputByteCount: context.suppPubInfo.keyDataLength
                 )
             case .sha512:
-                hkdf = HKDF<SHA512>.deriveKey(
+                hkdf = HKDF<CryptoKit.SHA512>.deriveKey(
                     inputKeyMaterial: SymmetricKey(data: sharedSecret),
                     info: try context.encode(),
                     outputByteCount: context.suppPubInfo.keyDataLength

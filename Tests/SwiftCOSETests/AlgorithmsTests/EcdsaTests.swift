@@ -28,10 +28,10 @@ struct EcdsaAlgorithmTests {
             for: algId
         ) as! EcdsaAlgorithm
         let signature = try ecdsa.sign(key: keyPair, data: data)
-        
+
         #expect(
-            signature != nil,
-            "Signature should not be nil"
+            !signature.isEmpty,
+            "Signature should not be empty"
         )
         
         // Verify signature

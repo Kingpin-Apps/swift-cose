@@ -98,8 +98,8 @@ struct CoseSignatureTests {
         coseSignature.parent = parent
         
         let encoded = try coseSignature.encode()
-        
-        #expect(encoded != nil, "Encoded CBOR should not be nil.")
+
+        #expect(!encoded.isEmpty, "Encoded CBOR should not be empty.")
     }
     
     // MARK: - Signature Structure Tests

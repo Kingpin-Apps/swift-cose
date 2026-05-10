@@ -1,7 +1,7 @@
 import Foundation
 import PotentCodables
 import CryptoKit
-import K1
+import P256K
 
 public class EC2Key: CoseKey {
     public var optionalParams: [AnyHashable: Any]
@@ -85,10 +85,10 @@ public class EC2Key: CoseKey {
     
     public static func supportsCryptographyKeyType(_ key: Any) -> Bool {
         let supportedKeyTypes: [Any] = [
-            K1.KeyAgreement.PrivateKey.self,
-            K1.KeyAgreement.PublicKey.self,
-            K1.ECDSA.PrivateKey.self,
-            K1.ECDSA.PublicKey.self,
+            P256K.KeyAgreement.PrivateKey.self,
+            P256K.KeyAgreement.PublicKey.self,
+            P256K.Signing.PrivateKey.self,
+            P256K.Signing.PublicKey.self,
             P256.Signing.PrivateKey.self,
             P256.Signing.PublicKey.self,
             P256.KeyAgreement.PrivateKey.self,
@@ -216,7 +216,7 @@ public class EC2Key: CoseKey {
         
         switch curve.curveType {
             case .SECP256K1:
-                let privateKey: K1.KeyAgreement.PrivateKey = try generateKeyAgreementPrivateKey(curve: curve.curveType!)
+                let privateKey: P256K.KeyAgreement.PrivateKey = try generateKeyAgreementPrivateKey(curve: curve.curveType!)
                 return try EC2Key.fromCryptographyKey(extKey: privateKey, optionalParams: optionalParams)
             case .SECP256R1:
                 let privateKey: P256.KeyAgreement.PrivateKey = try generateKeyAgreementPrivateKey(curve: curve.curveType!)

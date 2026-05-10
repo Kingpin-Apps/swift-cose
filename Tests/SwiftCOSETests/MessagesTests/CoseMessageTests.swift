@@ -38,7 +38,8 @@ struct CoseMessageTests {
     @Test("Test All Cose Message", arguments: CoseMessageIdentifier.allCases)
     func testCoseMessage(_ msgId: CoseMessageIdentifier) async throws {
         let msg = try CoseMessage.fromId(for: msgId)
-        #expect(msg != nil, "\(msgId) should have a message")
+        let expected = CoseMessage.getInstance(for: msgId)
+        #expect(msg == expected, "\(msgId) should resolve to \(expected)")
     }
 
     // MARK: - Initialization Tests
@@ -120,6 +121,5 @@ struct CoseMessageTests {
         let signatureVerified = try decodedMessage.verifySignature()
 
         #expect(signatureVerified == true, "Signature should be verified.")
-        #expect(decodedMessage != nil, "Decoded message should not be nil.")
     }
 }

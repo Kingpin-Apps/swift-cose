@@ -107,8 +107,7 @@ struct Sign1MessageTests {
         
         let decoded = try CBORSerialization.cbor(from: encoded)
         
-        #expect(decodedMessage.phdr != nil, "Decoded phdr should not be nil.")
-        #expect(decoded != nil, "Encoded CBOR should not be nil.")
+        #expect(!decodedMessage.phdr.isEmpty, "Decoded phdr should not be empty.")
         
         if case let .tagged(tag, value) = decoded {
             #expect(tag.rawValue == sign1Message.cborTag, "CBOR tag should match Sign1Message tag.")

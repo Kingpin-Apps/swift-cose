@@ -1,7 +1,7 @@
 import Testing
 import Foundation
 import CryptoKit
-import K1
+import P256K
 @testable import SwiftCOSE
 
 struct OKPKeyTests {
@@ -70,7 +70,7 @@ struct OKPKeyTests {
         let publicKey = privateKey.publicKey
         
         let keyDict: [AnyHashable: Any] = [
-            OKPKpCurve(): curve.identifier,
+            OKPKpCurve(): curve.identifier!,
             OKPKpX(): publicKey.rawRepresentation,
             OKPKpD(): privateKey.rawRepresentation
         ]

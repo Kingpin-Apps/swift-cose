@@ -23,10 +23,10 @@ struct EdDSATests {
             for: CoseAlgorithmIdentifier.edDSA
         ) as! EdDSAAlgorithm
         let signature = try eddsa.sign(key: keyPair, data: data)
-        
+
         #expect(
-            signature != nil,
-            "Signature should not be nil"
+            !signature.isEmpty,
+            "Signature should not be empty"
         )
         
         // Verify signature

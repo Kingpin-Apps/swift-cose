@@ -1,7 +1,7 @@
 import Testing
 import Foundation
 import CryptoKit
-import K1
+import P256K
 @testable import SwiftCOSE
 
 struct EC2KeyTests {
@@ -71,7 +71,7 @@ struct EC2KeyTests {
         let (_, xData, yData, dData) = try deriveNumbers(from: privateKey)
 
         let keyDict: [AnyHashable: Any] = [
-            EC2KpCurve(): curve.identifier,
+            EC2KpCurve(): curve.identifier!,
             EC2KpX(): xData,
             EC2KpY(): yData!,
             EC2KpD(): dData!
