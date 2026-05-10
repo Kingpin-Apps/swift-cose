@@ -1,11 +1,11 @@
+import CryptoKit
 import Foundation
 import P256K
-import CryptoKit
 
 public class EcdhHkdfAlgorithm: CoseAlgorithm {
     public var hashFunction: CoseHashFunction
     public var keyWrapFunction: CoseAlgorithm
-    
+
     public init(
         identifier: CoseAlgorithmIdentifier,
         fullname: String,
@@ -24,62 +24,82 @@ public class EcdhHkdfAlgorithm: CoseAlgorithm {
         guard let xValue = publicKey?.x, let yValue = publicKey?.y else {
             throw CoseError.invalidKey("Missing public key components x or y")
         }
-        
+
         var x963Representation = Data([0x04])
         x963Representation.append(xValue)
         x963Representation.append(yValue)
-        
-        switch curve.curveType {
-            case .SECP256K1:
-                let privateKeyData = try P256K.KeyAgreement.PrivateKey(
-                    dataRepresentation: dValue
-                )
-                let publicKeyData = try P256K.KeyAgreement.PublicKey(x963Representation: x963Representation)
 
-                let sharedSecret = privateKeyData.sharedSecretFromKeyAgreement(with: publicKeyData)
-                return sharedSecret.withUnsafeBytes { Data($0) }
-            case .SECP256R1:
-                let privateKeyData = try P256.KeyAgreement.PrivateKey(rawRepresentation: dValue)
-                let publicKeyData = try P256.KeyAgreement.PublicKey(x963Representation: x963Representation)
-                
-                let sharedSecret = try privateKeyData.sharedSecretFromKeyAgreement(with: publicKeyData)
-                return sharedSecret.withUnsafeBytes { Data($0) }
-            case .SECP384R1:
-                let privateKeyData = try P384.KeyAgreement.PrivateKey(rawRepresentation: dValue)
-                let publicKeyData = try P384.KeyAgreement.PublicKey(x963Representation: x963Representation)
-                
-                let sharedSecret = try privateKeyData.sharedSecretFromKeyAgreement(with: publicKeyData)
-                return sharedSecret.withUnsafeBytes { Data($0) }
-            case .SECP521R1:
-                let privateKeyData = try P521.KeyAgreement.PrivateKey(rawRepresentation: dValue)
-                let publicKeyData = try P521.KeyAgreement.PublicKey(x963Representation: x963Representation)
-                
-                let sharedSecret = try privateKeyData.sharedSecretFromKeyAgreement(with: publicKeyData)
-                return sharedSecret.withUnsafeBytes { Data($0) }
-            default:
-                throw CoseError.invalidAlgorithm("Unsupported curve")
+        switch curve.curveType {
+        case .SECP256K1:
+            let privateKeyData = try P256K.KeyAgreement.PrivateKey(
+                dataRepresentation: dValue
+            )
+            let publicKeyData = try P256K.KeyAgreement.PublicKey(
+                x963Representation: x963Representation)
+
+            let sharedSecret = try privateKeyData.sharedSecretFromKeyAgreement(
+                with: publicKeyData
+            )
+            return sharedSecret.withUnsafeBytes { Data($0) }
+        case .SECP256R1:
+            let privateKeyData = try P256.KeyAgreement.PrivateKey(
+                rawRepresentation: dValue
+            )
+            let publicKeyData = try P256.KeyAgreement.PublicKey(
+                x963Representation: x963Representation)
+
+            let sharedSecret = try privateKeyData.sharedSecretFromKeyAgreement(
+                with: publicKeyData
+            )
+            return sharedSecret.withUnsafeBytes { Data($0) }
+        case .SECP384R1:
+            let privateKeyData = try P384.KeyAgreement.PrivateKey(
+                rawRepresentation: dValue
+            )
+            let publicKeyData = try P384.KeyAgreement.PublicKey(
+                x963Representation: x963Representation)
+
+            let sharedSecret = try privateKeyData.sharedSecretFromKeyAgreement(
+                with: publicKeyData
+            )
+            return sharedSecret.withUnsafeBytes { Data($0) }
+        case .SECP521R1:
+            let privateKeyData = try P521.KeyAgreement.PrivateKey(
+                rawRepresentation: dValue
+            )
+            let publicKeyData = try P521.KeyAgreement.PublicKey(
+                x963Representation: x963Representation)
+
+            let sharedSecret = try privateKeyData.sharedSecretFromKeyAgreement(
+                with: publicKeyData
+            )
+            return sharedSecret.withUnsafeBytes { Data($0) }
+        default:
+            throw CoseError.invalidAlgorithm("Unsupported curve")
         }
     }
 
-    public func deriveKEK(curve: CoseCurve, privateKey: EC2Key, publicKey: EC2Key, context: CoseKDFContext) throws -> Data {
+    public func deriveKEK(
+        curve: CoseCurve, privateKey: EC2Key, publicKey: EC2Key, context: CoseKDFContext
+    ) throws -> Data {
         let sharedSecret = try ecdh(curve: curve, privateKey: privateKey, publicKey: publicKey)
         let hkdf: SymmetricKey
-        
+
         switch self.hashFunction {
-            case .sha256:
-                hkdf = HKDF<CryptoKit.SHA256>.deriveKey(
-                    inputKeyMaterial: SymmetricKey(data: sharedSecret),
-                    info: try context.encode(),
-                    outputByteCount: context.suppPubInfo.keyDataLength
-                )
-            case .sha512:
-                hkdf = HKDF<CryptoKit.SHA512>.deriveKey(
-                    inputKeyMaterial: SymmetricKey(data: sharedSecret),
-                    info: try context.encode(),
-                    outputByteCount: context.suppPubInfo.keyDataLength
-                )
-            default:
-                throw CoseError.invalidAlgorithm("Unsupported hash function")
+        case .sha256:
+            hkdf = HKDF<CryptoKit.SHA256>.deriveKey(
+                inputKeyMaterial: SymmetricKey(data: sharedSecret),
+                info: try context.encode(),
+                outputByteCount: context.suppPubInfo.keyDataLength
+            )
+        case .sha512:
+            hkdf = HKDF<CryptoKit.SHA512>.deriveKey(
+                inputKeyMaterial: SymmetricKey(data: sharedSecret),
+                info: try context.encode(),
+                outputByteCount: context.suppPubInfo.keyDataLength
+            )
+        default:
+            throw CoseError.invalidAlgorithm("Unsupported hash function")
         }
         return hkdf.withUnsafeBytes { Data($0) }
     }
