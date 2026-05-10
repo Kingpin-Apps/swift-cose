@@ -1,3 +1,9 @@
+## 0.1.16 (2026-05-09)
+
+### Fix
+
+- use swift-secp256k1 and fix warnings in tests
+
 ## 0.1.15 (2025-11-29)
 
 ### Fix
