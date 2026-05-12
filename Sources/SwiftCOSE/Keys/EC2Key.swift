@@ -1,6 +1,10 @@
 import Foundation
 import PotentCodables
+#if canImport(CryptoKit)
 import CryptoKit
+#else
+import Crypto
+#endif
 import P256K
 
 public class EC2Key: CoseKey {

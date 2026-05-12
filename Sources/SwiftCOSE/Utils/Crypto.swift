@@ -1,5 +1,9 @@
 import Foundation
+#if canImport(CryptoKit)
 import CryptoKit
+#else
+import Crypto
+#endif
 import P256K
 import CryptoSwift
 import SwiftCurve448
@@ -24,7 +28,11 @@ public func derivePublicKeyFromNumbers<T>(curve: CurveType, x: Data, y: Data) th
                 throw CoseError.invalidAlgorithm("Unsupported curve")
         }
     } catch {
+        #if canImport(CryptoKit)
         let error = error as! CryptoKit.CryptoKitError
+        #else
+        let error = error as! Crypto.CryptoKitError
+        #endif
         throw CoseError.invalidKey(
             "Error deriving public key for \(curve): \(error.localizedDescription)."
         )

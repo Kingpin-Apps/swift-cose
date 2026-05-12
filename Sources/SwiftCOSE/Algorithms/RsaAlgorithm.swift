@@ -1,5 +1,11 @@
 import Foundation
+#if canImport(CryptoKit)
 import CryptoKit
+private typealias CKDigest = CryptoKit.Digest
+#else
+import Crypto
+private typealias CKDigest = Crypto.Digest
+#endif
 import BigInt
 import CryptoSwift
 import _CryptoExtras
@@ -44,7 +50,7 @@ public class RsaAlgorithm: CoseAlgorithm {
         }
         
         // Get hash of data
-        let digest: any CryptoKit.Digest
+        let digest: any CKDigest
         switch hashFunction {
             case .sha1:
                 digest = Insecure.SHA1.hash(data: data)
@@ -78,7 +84,7 @@ public class RsaAlgorithm: CoseAlgorithm {
             let rsaPublicKey = try _RSA.Signing.PublicKey(n: key.n!, e: key.e!)
             
             // Get hash of data
-            let digest: any CryptoKit.Digest
+            let digest: any CKDigest
             switch hashFunction {
                 case .sha1:
                     digest = Insecure.SHA1.hash(data: data)

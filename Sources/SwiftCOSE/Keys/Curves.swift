@@ -1,6 +1,10 @@
 import Foundation
 import UncommonCrypto
+#if canImport(CryptoKit)
 import CryptoKit
+#else
+import Crypto
+#endif
 import P256K
 import SwiftCurve448
 

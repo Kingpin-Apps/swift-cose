@@ -1,9 +1,17 @@
 import Foundation
+#if canImport(CryptoKit)
 import CryptoKit
+#else
+import Crypto
+#endif
 import OrderedCollections
 import PotentCBOR
 import CryptoSwift
+#if canImport(OpenSSL)
 import OpenSSL
+#else
+import CCOSEOpenSSL
+#endif
 
 
 // MARK: - Curve25519.KeyAgreement.PublicKey Extensions
@@ -70,9 +78,16 @@ extension Data {
     
     static func randomBytes(count: Int) -> Data {
         var data = Data(count: count)
+        #if canImport(Security)
         _ = data.withUnsafeMutableBytes {
             SecRandomCopyBytes(kSecRandomDefault, count, $0.baseAddress!)
         }
+        #else
+        var rng = SystemRandomNumberGenerator()
+        for i in 0..<count {
+            data[i] = UInt8.random(in: 0...255, using: &rng)
+        }
+        #endif
         return data
     }
     

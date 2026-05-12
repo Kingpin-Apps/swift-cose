@@ -1,5 +1,5 @@
 {
-  "originHash" : "4433bf77b57af5f4e828258a876d79b5edd8099e6de7ccc8ea9390caf4c06e5d",
+  "originHash" : "ce776b35587499141b4589eb4e044be6a2cec7b4bb5215de13993c90081f8f24",
   "pins" : [
     {
       "identity" : "bigint",
@@ -105,8 +105,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-curve448.git",
       "state" : {
-        "revision" : "494602c2e3968566f63495fb9b546a86cb9f9b09",
-        "version" : "0.1.3"
+        "revision" : "02d3891649ee47cc602724d9ce4a83b8bb0e27cb",
+        "version" : "0.1.4"
       }
     },
     {

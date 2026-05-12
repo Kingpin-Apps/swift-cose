@@ -1,4 +1,12 @@
+#if canImport(CryptoKit)
 import CryptoKit
+private typealias HashSHA256 = CryptoKit.SHA256
+private typealias HashSHA512 = CryptoKit.SHA512
+#else
+import Crypto
+private typealias HashSHA256 = Crypto.SHA256
+private typealias HashSHA512 = Crypto.SHA512
+#endif
 import Foundation
 import P256K
 
@@ -37,7 +45,7 @@ public class EcdhHkdfAlgorithm: CoseAlgorithm {
             let publicKeyData = try P256K.KeyAgreement.PublicKey(
                 x963Representation: x963Representation)
 
-            let sharedSecret = try privateKeyData.sharedSecretFromKeyAgreement(
+            let sharedSecret = privateKeyData.sharedSecretFromKeyAgreement(
                 with: publicKeyData
             )
             return sharedSecret.withUnsafeBytes { Data($0) }
@@ -87,13 +95,13 @@ public class EcdhHkdfAlgorithm: CoseAlgorithm {
 
         switch self.hashFunction {
         case .sha256:
-            hkdf = HKDF<CryptoKit.SHA256>.deriveKey(
+            hkdf = HKDF<HashSHA256>.deriveKey(
                 inputKeyMaterial: SymmetricKey(data: sharedSecret),
                 info: try context.encode(),
                 outputByteCount: context.suppPubInfo.keyDataLength
             )
         case .sha512:
-            hkdf = HKDF<CryptoKit.SHA512>.deriveKey(
+            hkdf = HKDF<HashSHA512>.deriveKey(
                 inputKeyMaterial: SymmetricKey(data: sharedSecret),
                 info: try context.encode(),
                 outputByteCount: context.suppPubInfo.keyDataLength

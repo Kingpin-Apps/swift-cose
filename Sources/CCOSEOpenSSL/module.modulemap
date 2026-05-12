@@ -1,0 +1,5 @@
+module CCOSEOpenSSL [system] {
+    header "shim.h"
+    link "crypto"
+    export *
+}

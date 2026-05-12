@@ -446,30 +446,38 @@ public class CoseKey: CustomStringConvertible {
     
     /// Load a PEM-encoded private key
     private static func loadPEMPrivateKey(pem: String, password: Data?) throws -> Any {
+        #if canImport(Security)
         let pemData = Data(pem.utf8)
         let options: [String: Any] = password != nil ? [kSecImportExportPassphrase as String: password!] : [:]
-        
+
         var items: CFArray?
         let status = SecPKCS12Import(pemData as CFData, options as CFDictionary, &items)
-        
+
         guard status == errSecSuccess, let array = items as? [[String: Any]], let identity = array.first?[kSecImportItemIdentity as String] else {
             throw CoseError.invalidKeyType("Invalid PEM format for private key.")
         }
-        
+
         return identity
+        #else
+        throw CoseError.invalidKeyType("PEM private key loading via PKCS12 is not supported on this platform.")
+        #endif
     }
-    
+
     /// Load a PEM-encoded public key
     private static func loadPEMPublicKey(pem: String) throws -> Any {
+        #if canImport(Security)
         let pemData = Data(pem.utf8)
         let options: [String: Any] = [:]
-        
+
         var error: Unmanaged<CFError>?
         guard let secKey = SecKeyCreateWithData(pemData as CFData, options as CFDictionary, &error) else {
             throw CoseError.invalidKeyType("Invalid PEM format for public key.")
         }
-        
+
         return secKey
+        #else
+        throw CoseError.invalidKeyType("PEM public key loading via SecKey is not supported on this platform.")
+        #endif
     }
     
     private func keyTransform(_ key: Any) -> KeyParam? {

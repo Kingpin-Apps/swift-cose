@@ -1,5 +1,9 @@
 import Foundation
+#if canImport(CryptoKit)
 import CryptoKit
+#else
+import Crypto
+#endif
 
 public class AesKwAlgorithm: EncAlgorithm {
     public func keyWrap(kek: CoseSymmetricKey, data: Data) throws -> Data {
