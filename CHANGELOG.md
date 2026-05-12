@@ -1,3 +1,9 @@
+## 0.1.18 (2026-05-11)
+
+### Fix
+
+- improve platform compatibility
+
 ## 0.1.17 (2026-05-09)
 
 ### Fix
