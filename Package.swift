@@ -19,10 +19,6 @@ let package = Package(
             targets: ["SwiftCOSE"]),
     ],
     dependencies: [
-        // Local path during migration pilot; switch to a tagged URL
-        // dependency before this branch merges.
-        .package(path: "../swift-cbor-codable"),
-        // Previously brought in transitively via PotentCodables.
         .package(url: "https://github.com/attaswift/BigInt.git", .upToNextMinor(from: "5.3.0")),
         .package(url: "https://github.com/leif-ibsen/Digest.git", from: "1.11.0"),
         .package(url: "https://github.com/tesseract-one/UncommonCrypto.swift.git",
@@ -33,6 +29,7 @@ let package = Package(
         .package(url: "https://github.com/21-DOT-DEV/swift-secp256k1", from: "0.22.0"),
         .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", .upToNextMinor(from: "1.9.0")),
         .package(url: "https://github.com/Kingpin-Apps/swift-curve448.git", from: "0.1.4"),
+        .package(url: "https://github.com/Kingpin-Apps/swift-cbor-codable.git", from: "0.2.0"),
         // Provides Crypto-compatible APIs (SHA, HMAC, Curve25519, P256/P384/P521, AES.GCM, HKDF…)
         // on Linux, where CryptoKit is unavailable.
         .package(url: "https://github.com/apple/swift-crypto.git", from: "3.15.1"),
