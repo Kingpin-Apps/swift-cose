@@ -1,6 +1,5 @@
 import Foundation
-import PotentCBOR
-import PotentCodables
+import CBORCodable
 import OrderedCollections
 
 /// Abstract base class for all COSE key types.

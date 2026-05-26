@@ -1,7 +1,6 @@
 import Testing
 import Foundation
-import PotentCBOR
-import PotentCodables
+import CBORCodable
 @testable import SwiftCOSE
 
 struct ContextTests {

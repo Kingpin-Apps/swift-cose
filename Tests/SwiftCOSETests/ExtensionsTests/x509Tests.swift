@@ -3,7 +3,7 @@ import CryptoKit
 import Foundation
 import X509
 import SwiftASN1
-import PotentCBOR
+import CBORCodable
 @testable import SwiftCOSE
 
 struct X509Tests {
@@ -102,7 +102,7 @@ struct X509Tests {
         )
         
         // Decode CBOR to extract raw DER
-        let expectedThumbprint = try algorithm.computeHash(data: certificateCBOR.bytesStringValue!)
+        let expectedThumbprint = try algorithm.computeHash(data: certificateCBOR.byteStringValue!)
         
         // Assertions
         #expect(x5t.thumbprint == expectedThumbprint)
@@ -124,7 +124,7 @@ struct X509Tests {
        
        // Assert correct CBOR structure
 //       #expect(encodedCBOR.count == 2)
-       #expect(encodedCBOR[0] == CBOR(integerLiteral: algorithm.hashAlgorithm.rawValue))
+       #expect(encodedCBOR[0] == CBOR(algorithm.hashAlgorithm.rawValue))
        #expect(encodedCBOR[1] == CBOR.byteString(thumbprint))
    }
    
@@ -133,7 +133,7 @@ struct X509Tests {
        let thumbprint = Data([0x01, 0x02, 0x03, 0x04])
        let algorithm = Sha256()
        let encodedCBOR: [CBOR] = [
-        CBOR(integerLiteral: algorithm.hashAlgorithm.rawValue),
+        CBOR(algorithm.hashAlgorithm.rawValue),
         CBOR.byteString(thumbprint)
        ]
        

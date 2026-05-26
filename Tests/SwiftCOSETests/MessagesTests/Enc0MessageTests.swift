@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-import PotentCBOR
+import CBORCodable
 import OrderedCollections
 @testable import SwiftCOSE
 
@@ -50,7 +50,7 @@ struct Enc0MessageTests {
     // MARK: - From Cose Object Tests
     
     @Test func testFromCoseObject() async throws {
-        let coseArray: CBOR.Array = [
+        let coseArray: [CBOR] = [
             CBOR.byteString(Data()),  // Zero-length protected header
             CBOR.map([
                 CBOR.simple(1): CBOR(Direct().identifier!) // Algorithm
@@ -93,7 +93,7 @@ struct Enc0MessageTests {
         
         // Extract tag
         if case let .tagged(tag, value) = decoded {
-            #expect(tag.rawValue == enc0Message.cborTag, "CBOR tag should match Encrypt0 tag.")
+            #expect(Int(tag) == enc0Message.cborTag, "CBOR tag should match Encrypt0 tag.")
             #expect(value.arrayValue!.count == 3, "Encoded CBOR should contain three elements.")
         } else {
             Issue.record("Encoded CBOR should be tagged.")

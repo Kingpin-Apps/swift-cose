@@ -1,5 +1,5 @@
 import Foundation
-import PotentCBOR
+import CBORCodable
 import OrderedCollections
 
 // MARK: - EncCommon
@@ -17,7 +17,7 @@ public class EncCommon: CoseMessage {
     /// Build the encryption context.
     private var encStructure: Data {
         get throws {
-            var structure: [CBOR] = [CBOR.utf8String(context)]
+            var structure: [CBOR] = [CBOR.textString(context)]
             baseStructure(&structure)
             return try! CBORSerialization.data(from: .array(structure))
         }

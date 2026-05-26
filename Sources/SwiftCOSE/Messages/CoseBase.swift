@@ -1,5 +1,5 @@
 import Foundation
-import PotentCBOR
+import CBORCodable
 import OrderedCollections
 
 /// Basic COSE information buckets.
@@ -188,7 +188,7 @@ public class CoseBase {
 
         return try CoseBase(
             uhdr: unprotectedAttributes,
-            phdrEncoded: phdrEncoded.bytesStringValue
+            phdrEncoded: phdrEncoded.byteStringValue
         )
     }
     

@@ -1,5 +1,5 @@
 import Foundation
-import PotentCBOR
+import CBORCodable
 import OrderedCollections
 
 /// Abstract base class for COSE Mac messages (e.g., COSE_Mac and COSE_Mac0)
@@ -24,7 +24,7 @@ public class MacCommon: CoseMessage {
                     .valueError("Payload cannot be empty for tag computation.")
             }
             
-            var structure: [CBOR] = [CBOR.utf8String(context)]
+            var structure: [CBOR] = [CBOR.textString(context)]
             baseStructure(&structure)
             return try! CBORSerialization.data(from: .array(structure))
         }

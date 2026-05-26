@@ -1,5 +1,5 @@
 import Foundation
-import PotentCBOR
+import CBORCodable
 import OrderedCollections
 
 /// A COSE Sign1Message class, representing a COSE single signature message.
@@ -57,7 +57,7 @@ public class Sign1Message: SignCommon {
             throw CoseError.invalidMessage("Missing or invalid signature.")
         }
 
-        msg.signature = signature!.bytesStringValue!
+        msg.signature = signature!.byteStringValue!
 
         return msg
     }
@@ -96,7 +96,7 @@ public class Sign1Message: SignCommon {
                 from:
                     CBOR
                     .tagged(
-                        CBOR.Tag(rawValue: UInt64(cborTag)),
+                        UInt64(cborTag),
                         CBOR.array(cborMessage)
                     )
             )
@@ -107,7 +107,7 @@ public class Sign1Message: SignCommon {
 
     /// Computes the signature structure that needs to be signed.
     public override func createSignatureStructure(detachedPayload: Data? = nil) throws -> Data {
-        var sigStructure: [CBOR] = [CBOR.utf8String(context)]
+        var sigStructure: [CBOR] = [CBOR.textString(context)]
         baseStructure(&sigStructure)
 
         if detachedPayload == nil {

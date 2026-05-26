@@ -1,7 +1,6 @@
 import Testing
 import Foundation
-import PotentCodables
-import PotentCBOR
+import CBORCodable
 import OrderedCollections
 @testable import SwiftCOSE
 
@@ -68,7 +67,7 @@ struct CoseRecipientTests {
     // MARK: - Test Create Recipient from CBOR
     
     @Test func testCreateRecipientFromCBOR() async throws {
-        let coseArray: CBOR.Array = [
+        let coseArray: [CBOR] = [
             CBOR.byteString(Data()),  // zero-length Protected header for DIRECT_ENCRYPTION
             CBOR.map([
                 CBOR.simple(1): CBOR(Direct().identifier!)
@@ -85,7 +84,7 @@ struct CoseRecipientTests {
     // MARK: - Test Create Recipient Error
     
     @Test func testCreateRecipientError() async throws {
-        let coseArray: CBOR.Array = [
+        let coseArray: [CBOR] = [
             CBOR.map([
                 CBOR.simple(1): CBOR(Direct().identifier!)
             ]),

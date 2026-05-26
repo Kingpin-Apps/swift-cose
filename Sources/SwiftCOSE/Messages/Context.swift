@@ -1,6 +1,5 @@
 import Foundation
-import PotentCodables
-import PotentCBOR
+import CBORCodable
 import OrderedCollections
 
 public struct PartyInfo {

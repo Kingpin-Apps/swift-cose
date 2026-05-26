@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-import PotentCBOR
+import CBORCodable
 import OrderedCollections
 @testable import SwiftCOSE
 
@@ -60,7 +60,7 @@ struct Sign1MessageTests {
         let protectedHdrMap = CBOR.map((phdr as Dictionary<AnyHashable, Any>).mapKeysToCbor)
         let encoded = try CBORSerialization.data(from: protectedHdrMap)
         
-        let coseArray: CBOR.Array = [
+        let coseArray: [CBOR] = [
             CBOR.byteString(encoded),
             CBOR.map([CBOR.simple(1): CBOR(Es256().identifier!)]),
             CBOR.byteString(payload),
@@ -110,7 +110,7 @@ struct Sign1MessageTests {
         #expect(!decodedMessage.phdr.isEmpty, "Decoded phdr should not be empty.")
         
         if case let .tagged(tag, value) = decoded {
-            #expect(tag.rawValue == sign1Message.cborTag, "CBOR tag should match Sign1Message tag.")
+            #expect(Int(tag) == sign1Message.cborTag, "CBOR tag should match Sign1Message tag.")
             #expect(value.arrayValue!.count == 4, "Encoded CBOR should contain four elements.")
         } else {
             Issue.record("Decoded CBOR should be tagged.")

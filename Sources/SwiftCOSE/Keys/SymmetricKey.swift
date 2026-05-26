@@ -1,5 +1,4 @@
 import Foundation
-import PotentCodables
 
 
 public class CoseSymmetricKey: CoseKey {
@@ -108,7 +107,7 @@ public class CoseSymmetricKey: CoseKey {
     ///   - optionalParams: Optional key attributes for the `SymmetricKey` object, e.g., `KpAlg` or  `KpKid`.
     /// - Returns: A COSE_key of type SymmetricKey.
     /// - Throws: `CoseError` if key length is invalid.
-    public static func generateKey(keyLength: Int, optionalParams: [AnyHashable: AnyValue]? = nil) throws -> CoseSymmetricKey {
+    public static func generateKey(keyLength: Int, optionalParams: [AnyHashable: Any]? = nil) throws -> CoseSymmetricKey {
         guard keyLength == 16 || keyLength == 24 || keyLength == 32 else {
             throw CoseError.invalidKey("Key length must be 16, 24, or 32 bytes")
         }

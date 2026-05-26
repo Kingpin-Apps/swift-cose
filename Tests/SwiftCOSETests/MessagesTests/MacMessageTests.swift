@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-import PotentCBOR
+import CBORCodable
 import OrderedCollections
 @testable import SwiftCOSE
 
@@ -64,7 +64,7 @@ struct MacMessageTests {
         let protectedHdrMap = CBOR.map(phdr.mapKeysToCbor)
         let encoded = try CBORSerialization.data(from: protectedHdrMap)
         
-        let recipient: CBOR.Array = [
+        let recipient: [CBOR] = [
             CBOR.byteString(Data()),  // Zero-length protected header
             CBOR.map([
                 CBOR.simple(1): CBOR(Direct().identifier!) // Algorithm
@@ -72,11 +72,11 @@ struct MacMessageTests {
             CBOR.byteString(Data())  // Zero-length ciphertext
         ]
         
-        let recipients: CBOR.Array = [
+        let recipients: [CBOR] = [
             CBOR.array(recipient)
         ]
         
-        let coseArray: CBOR.Array = [
+        let coseArray: [CBOR] = [
             CBOR.byteString(encoded),
             CBOR.map([
                 CBOR.simple(1): CBOR(Direct().identifier!),
@@ -125,7 +125,7 @@ struct MacMessageTests {
         #expect(decoded != nil, "Encoded CBOR should not be nil.")
         
         if case let .tagged(tag, value) = decoded {
-            #expect(tag.rawValue == macMessage.cborTag, "CBOR tag should match MacMessage tag.")
+            #expect(Int(tag) == macMessage.cborTag, "CBOR tag should match MacMessage tag.")
             #expect(value.arrayValue!.count == 5, "Encoded CBOR should contain five elements (including recipients).")
         } else {
             Issue.record("Decoded CBOR should be tagged.")

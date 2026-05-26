@@ -1,5 +1,5 @@
 import Foundation
-import PotentCBOR
+import CBORCodable
 import OrderedCollections
 
 /// COSE_Mac0 message type
@@ -45,7 +45,7 @@ public class Mac0Message: MacCommon {
             externalAAD: coseMessage.externalAAD,
             key: coseMessage.key as? CoseSymmetricKey
         )
-        msg.authTag = authTag!.bytesStringValue!
+        msg.authTag = authTag!.byteStringValue!
         
         return msg
     }

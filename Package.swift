@@ -19,7 +19,7 @@ let package = Package(
             targets: ["SwiftCOSE"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/KINGH242/PotentCodables.git", .upToNextMinor(from: "3.6.0")),
+        .package(url: "https://github.com/attaswift/BigInt.git", .upToNextMinor(from: "5.3.0")),
         .package(url: "https://github.com/leif-ibsen/Digest.git", from: "1.11.0"),
         .package(url: "https://github.com/tesseract-one/UncommonCrypto.swift.git",
                  .upToNextMinor(from: "0.2.1")),
@@ -29,6 +29,7 @@ let package = Package(
         .package(url: "https://github.com/21-DOT-DEV/swift-secp256k1", from: "0.22.0"),
         .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", .upToNextMinor(from: "1.9.0")),
         .package(url: "https://github.com/Kingpin-Apps/swift-curve448.git", from: "0.1.4"),
+        .package(url: "https://github.com/Kingpin-Apps/swift-cbor-codable.git", from: "0.2.0"),
         // Provides Crypto-compatible APIs (SHA, HMAC, Curve25519, P256/P384/P521, AES.GCM, HKDF…)
         // on Linux, where CryptoKit is unavailable.
         .package(url: "https://github.com/apple/swift-crypto.git", from: "3.15.1"),
@@ -52,7 +53,8 @@ let package = Package(
         .target(
             name: "SwiftCOSE",
             dependencies: [
-                "PotentCodables",
+                .product(name: "CBORCodable", package: "swift-cbor-codable"),
+                .product(name: "BigInt", package: "BigInt"),
                 .product(name: "Digest", package: "digest"),
                 .product(name: "UncommonCrypto", package: "UncommonCrypto.swift"),
                 .product(name: "X509", package: "swift-certificates"),

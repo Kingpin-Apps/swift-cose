@@ -1,5 +1,4 @@
 import Foundation
-import PotentCodables
 #if canImport(CryptoKit)
 import CryptoKit
 #else
@@ -213,7 +212,7 @@ public class EC2Key: CoseKey {
     ///   - curve: Specify an :class:`CoseCurve`.
     ///   - optionalParams: Optional key attributes for the :class:`EC2Key` object, e.g., `KpAlg` or `KpKid`.
     /// - Returns: An COSE `EC2Key` key.
-    static func generateKey(curve: CoseCurve, optionalParams: [AnyHashable: AnyValue] = [:]) throws -> EC2Key {
+    static func generateKey(curve: CoseCurve, optionalParams: [AnyHashable: Any] = [:]) throws -> EC2Key {
         if curve.keyType != .ktyEC2 {
             throw CoseError.invalidKey("Invalid curve type \(curve) for key type \(EC2Key.self)")
         }

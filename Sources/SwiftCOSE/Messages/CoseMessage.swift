@@ -1,5 +1,5 @@
 import Foundation
-import PotentCBOR
+import CBORCodable
 import OrderedCollections
 
 public enum CoseMessageIdentifier: Int, CaseIterable, Sendable {
@@ -159,7 +159,7 @@ public class CoseMessage: CoseBase, CustomStringConvertible {
     /// - Returns: The decoded COSE message.
     public override class func fromCoseObject(coseObj: [CBOR]) throws -> CoseMessage {
         let baseMsg = try super.fromCoseObject(coseObj: coseObj)
-        baseMsg.payload = coseObj.last?.bytesStringValue
+        baseMsg.payload = coseObj.last?.byteStringValue
         return CoseMessage(
             phdr: baseMsg.phdr,
             uhdr: baseMsg.uhdr,
@@ -207,7 +207,7 @@ public class CoseMessage: CoseBase, CustomStringConvertible {
                 .data(
                     from: CBOR
                         .tagged(
-                            CBOR.Tag(rawValue: UInt64(cborTag)),
+                            UInt64(cborTag),
                             CBOR.array(message)
                         )
                 )

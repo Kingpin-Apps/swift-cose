@@ -1,5 +1,5 @@
 import Foundation
-import PotentCBOR
+import CBORCodable
 import OrderedCollections
 
 public class CoseSignature: SignCommon {
@@ -50,7 +50,7 @@ public class CoseSignature: SignCommon {
         }
         
         var signStructure: [CBOR] = [
-            CBOR.utf8String(parent.context),
+            CBOR.textString(parent.context),
             CBOR.fromAny(parent.phdrEncoded)
         ]
         

@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-import PotentCBOR
+import CBORCodable
 import OrderedCollections
 @testable import SwiftCOSE
 
@@ -86,7 +86,7 @@ struct EncMessageTests {
         
         // Verify tag and structure
         if case let .tagged(tag, value) = decoded {
-            #expect(tag.rawValue == encMessage.cborTag, "CBOR tag should match EncMessage tag.")
+            #expect(Int(tag) == encMessage.cborTag, "CBOR tag should match EncMessage tag.")
             #expect(value.arrayValue?.count == 4, "Encoded CBOR should contain four elements (including recipients).")
         }
     }

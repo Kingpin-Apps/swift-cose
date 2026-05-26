@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-import PotentCBOR
+import CBORCodable
 import OrderedCollections
 @testable import SwiftCOSE
 
@@ -42,7 +42,7 @@ struct CoseBaseTests {
     // MARK: - From Cose Object Tests
     
     @Test func testFromCoseObject() async throws {
-        let coseArray: CBOR.Array = [
+        let coseArray: [CBOR] = [
             CBOR.byteString(Data()),  // Zero-length protected header
             CBOR.map([
                 CBOR.simple(1): CBOR(Direct().identifier!) // Algorithm

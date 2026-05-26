@@ -1,5 +1,5 @@
 import Foundation
-import PotentCBOR
+import CBORCodable
 import X509
 
 
@@ -43,7 +43,7 @@ public class X5T: Equatable {
         var certData = certificate
         if cborEncoded {
             let cbor = CBOR(certificate)
-            certData = cbor.bytesStringValue!
+            certData = cbor.byteStringValue!
         }
         let hash = try alg.computeHash(data: certData)
         return X5T(alg: alg, thumbprint: hash)
@@ -54,17 +54,17 @@ public class X5T: Equatable {
             fatalError("Invalid CBOR item format")
         }
         let alg = CoseAlgorithm.getInstance(
-            for: CoseAlgorithmIdentifier(rawValue: algId.integerValue()!)!
+            for: CoseAlgorithmIdentifier(rawValue: algId.intValue!)!
         )
         return X5T(
             alg: alg as! HashAlgorithm,
-            thumbprint: thumbprint.bytesStringValue!
+            thumbprint: thumbprint.byteStringValue!
         )
     }
 
     public func encode() -> CBOR {
         return CBOR.array([
-            CBOR(integerLiteral: alg.hashAlgorithm.rawValue),
+            CBOR(alg.hashAlgorithm.rawValue),
             CBOR.byteString(thumbprint!)
         ])
     }
@@ -73,7 +73,7 @@ public class X5T: Equatable {
         var certData = certificate
         if cborEncoded {
             let cbor = try CBORSerialization.cbor(from: certificate)
-            certData = cbor.bytesStringValue!
+            certData = cbor.byteStringValue!
         }
         let hash = try alg.computeHash(data: certData)
         return thumbprint == hash

@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-import PotentCBOR
+import CBORCodable
 import OrderedCollections
 
 @testable import SwiftCOSE
@@ -56,7 +56,7 @@ struct CoseSignMessageTests {
         let protectedHdrMap = CBOR.map((phdr as Dictionary<AnyHashable, Any>).mapKeysToCbor)
         let encoded = try CBORSerialization.data(from: protectedHdrMap)
         
-        let signature: CBOR.Array = [
+        let signature: [CBOR] = [
             CBOR.byteString(Data()),  // Zero-length protected header
             CBOR.map([
                 CBOR.simple(1): CBOR(Es256().identifier!) // Algorithm
@@ -64,11 +64,11 @@ struct CoseSignMessageTests {
             CBOR.byteString(Data())  // Zero-length ciphertext
         ]
         
-        let signatures: CBOR.Array = [
+        let signatures: [CBOR] = [
             CBOR.array(signature)
         ]
         
-        let coseArray: CBOR.Array = [
+        let coseArray: [CBOR] = [
             CBOR.byteString(encoded),
             CBOR.map([CBOR.simple(1): CBOR(Es256().identifier!)]),
             CBOR.byteString(payload),
@@ -117,7 +117,7 @@ struct CoseSignMessageTests {
         #expect(decoded != nil, "Encoded CBOR should not be nil.")
         
         if case let .tagged(tag, value) = decoded {
-            #expect(tag.rawValue == coseSignMessage.cborTag, "CBOR tag should match CoseSignMessage tag.")
+            #expect(Int(tag) == coseSignMessage.cborTag, "CBOR tag should match CoseSignMessage tag.")
             #expect(value.arrayValue!.count == 4, "Encoded CBOR should contain four elements.")
         }
     }

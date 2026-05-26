@@ -5,7 +5,7 @@ import CryptoKit
 import Crypto
 #endif
 import OrderedCollections
-import PotentCBOR
+import CBORCodable
 import CryptoSwift
 #if canImport(OpenSSL)
 import OpenSSL
@@ -179,7 +179,7 @@ extension Dictionary where Key == AnyHashable, Value == CoseHeaderAttribute {
 extension CBOR {
     static func fromAny(_ value: Any) -> CBOR {
         if let stringValue = value as? String {
-            return .utf8String(stringValue)
+            return .textString(stringValue)
         } else if let intValue = value as? Int {
             return CBOR(intValue)
         } else if let simpleValue = value as? UInt8 {
@@ -200,7 +200,7 @@ extension CBOR {
             if let identifier = attrValue.identifier {
                 return CBOR(identifier)
             } else if let fullname = attrValue.fullname {
-                return .utf8String(fullname)
+                return .textString(fullname)
             } else {
                 return .null
             }
