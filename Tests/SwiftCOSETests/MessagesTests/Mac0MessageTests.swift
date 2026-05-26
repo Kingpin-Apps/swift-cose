@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-import PotentCBOR
+import CBORCodable
 import OrderedCollections
 @testable import SwiftCOSE
 
@@ -62,7 +62,7 @@ struct Mac0MessageTests {
         let protectedHdrMap = CBOR.map(phdr.mapKeysToCbor)
         let encoded = try CBORSerialization.data(from: protectedHdrMap)
         
-        let coseArray: CBOR.Array = [
+        let coseArray: [CBOR] = [
             CBOR.byteString(encoded),
             CBOR.map([
                 CBOR.simple(1): CBOR(Direct().identifier!), // Algorithm
@@ -110,7 +110,7 @@ struct Mac0MessageTests {
         #expect(decoded != nil, "Encoded CBOR should not be nil.")
         
         if case let .tagged(tag, value) = decoded {
-            #expect(tag.rawValue == mac0Message.cborTag, "CBOR tag should match Mac0 tag.")
+            #expect(Int(tag) == mac0Message.cborTag, "CBOR tag should match Mac0 tag.")
             #expect(value.arrayValue!.count == 4, "Encoded CBOR should contain four elements.")
         } else {
             Issue.record("Failed to decode CBOR value.")
@@ -120,7 +120,7 @@ struct Mac0MessageTests {
     // MARK: - Invalid Object Test
     
     @Test func testInvalidCoseObject() async throws {
-        let invalidCoseArray: CBOR.Array = [
+        let invalidCoseArray: [CBOR] = [
             CBOR.map([
                 CBOR.simple(1): CBOR(A128GCM().identifier!)  // Algorithm
             ])

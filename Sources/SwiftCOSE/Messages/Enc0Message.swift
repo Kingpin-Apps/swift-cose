@@ -1,6 +1,6 @@
 import Foundation
 import OrderedCollections
-import PotentCBOR
+import CBORCodable
 
 public class Enc0Message: EncCommon {
     public override var context: String { "Encrypt0" }

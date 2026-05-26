@@ -4,7 +4,6 @@ import CryptoKit
 #else
 import Crypto
 #endif
-import PotentCodables
 import SwiftCurve448
 
 public class OKPKey: CoseKey {
@@ -212,7 +211,7 @@ public class OKPKey: CoseKey {
     ///  - optionalParams: Optional key attributes for the :class:`OKPKey` object, e.g., `KpAlg` or `KpKid`.
     /// - Returns: An COSE `OKPKey` key.
     /// - Throws: `CoseError.unsupportedCurve` if the curve is not supported.
-    public static func generateKey(curve: CoseCurve, optionalParams: [AnyHashable: AnyValue] = [:]) throws -> OKPKey {
+    public static func generateKey(curve: CoseCurve, optionalParams: [AnyHashable: Any] = [:]) throws -> OKPKey {
         if curve.keyType != .ktyOKP {
             throw CoseError.invalidKey("Invalid curve type \(curve) for key type \(OKPKey.self)")
         }

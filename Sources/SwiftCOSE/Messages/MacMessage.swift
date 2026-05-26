@@ -1,5 +1,5 @@
 import Foundation
-import PotentCBOR
+import CBORCodable
 import OrderedCollections
 
 /// COSE MACed Message with Recipients
@@ -42,8 +42,8 @@ public class MacMessage: MacCommon {
         )
         
         // Extract and assign the authentication tag
-        if authTag?.bytesStringValue != nil {
-            msg.authTag = authTag!.bytesStringValue!
+        if authTag?.byteStringValue != nil {
+            msg.authTag = authTag!.byteStringValue!
         } else {
             throw CoseError.valueError("Missing authentication tag in COSE object.")
         }

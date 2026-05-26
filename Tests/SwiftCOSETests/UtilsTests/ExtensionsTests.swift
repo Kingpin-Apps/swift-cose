@@ -2,7 +2,7 @@ import Testing
 import Foundation
 import CryptoKit
 import CryptoSwift
-import PotentCBOR
+import CBORCodable
 import SwiftCurve448
 @testable import SwiftCOSE
 
@@ -108,7 +108,7 @@ struct ExtensionsTests {
         let dictionary: [AnyHashable: Any] = ["key": "value", 1: 42]
         let cborDict = dictionary.mapKeysToCbor
         
-        #expect(cborDict[CBOR("key")] == CBOR.utf8String("value"))
+        #expect(cborDict[CBOR("key")] == CBOR.textString("value"))
         #expect(cborDict[CBOR.unsignedInt(1)] == CBOR.unsignedInt(42))
     }
     

@@ -1,5 +1,5 @@
 import Foundation
-import PotentCBOR
+import CBORCodable
 
 /// KeyWrap recipient type
 public class KeyWrap: CoseRecipient {

@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-import PotentCBOR
+import CBORCodable
 @testable import SwiftCOSE
 
 struct CoseKeyTests {

@@ -1,5 +1,5 @@
 import Foundation
-import PotentCBOR
+import CBORCodable
 import OrderedCollections
 
 /// Abstract class representing a COSE Sign Message.
@@ -107,7 +107,7 @@ public class CoseSignMessage: CoseMessage {
             return try CBORSerialization.data(
                 from: CBOR
                     .tagged(
-                        CBOR.Tag(rawValue: UInt64(cborTag)),
+                        UInt64(cborTag),
                         CBOR.array(cborMessage)
                     )
             )

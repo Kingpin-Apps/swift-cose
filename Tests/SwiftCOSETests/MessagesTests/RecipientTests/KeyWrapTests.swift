@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-import PotentCBOR
+import CBORCodable
 import OrderedCollections
 @testable import SwiftCOSE
 
@@ -30,7 +30,7 @@ struct KeyWrapTests {
     // MARK: - Test fromCoseObject
     
     @Test func testFromCoseObject() async throws {
-        let coseArray: CBOR.Array = [
+        let coseArray: [CBOR] = [
             CBOR.byteString(Data()),  // Zero-length protected header
             CBOR.map([
                 CBOR.simple(1): CBOR(A128KW().identifier!) // Algorithm

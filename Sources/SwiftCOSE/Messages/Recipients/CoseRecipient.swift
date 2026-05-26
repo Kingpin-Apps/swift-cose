@@ -1,6 +1,5 @@
 import Foundation
-import PotentCodables
-import PotentCBOR
+import CBORCodable
 import OrderedCollections
 
 
@@ -27,7 +26,7 @@ public class CoseRecipient: CoseMessage {
     // MARK: - Abstract Methods
     public class func fromCoseObject(coseObj: [CBOR], context: String? = nil) throws -> CoseRecipient {
         let baseMsg = try super.fromCoseObject(coseObj: coseObj)
-        baseMsg.payload = coseObj.last?.bytesStringValue
+        baseMsg.payload = coseObj.last?.byteStringValue
         return CoseRecipient(
             phdr: baseMsg.phdr,
             uhdr: baseMsg.uhdr,
@@ -108,7 +107,7 @@ public class CoseRecipient: CoseMessage {
         let protectedHeader = recipient[0]
         var pHdr: OrderedDictionary<CoseHeaderAttribute, Any> = [:]
         
-        if let pBytes = protectedHeader.bytesStringValue, !pBytes.isEmpty {
+        if let pBytes = protectedHeader.byteStringValue, !pBytes.isEmpty {
             let decoded = try CBORSerialization.cbor(from: pBytes)
             
             if case let CBOR.map(decoded) = decoded {
@@ -250,7 +249,7 @@ public class CoseRecipient: CoseMessage {
     ///   - peerKey: The peer's EC2 key.
     ///   - optionalParams: Optional parameters for key generation.
     /// - Throws: `CoseError` if an unrelated ephemeral key is already present.
-    func setupEphemeralKey(peerKey: EC2Key, optionalParams: [AnyHashable: AnyValue] = [:]) throws {
+    func setupEphemeralKey(peerKey: EC2Key, optionalParams: [AnyHashable: Any] = [:]) throws {
         
         // Generate the ephemeral key using the curve from the peer key
         self.key = try EC2Key

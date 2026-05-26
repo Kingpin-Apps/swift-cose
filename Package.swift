@@ -19,7 +19,11 @@ let package = Package(
             targets: ["SwiftCOSE"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/KINGH242/PotentCodables.git", .upToNextMinor(from: "3.6.0")),
+        // Local path during migration pilot; switch to a tagged URL
+        // dependency before this branch merges.
+        .package(path: "../swift-cbor-codable"),
+        // Previously brought in transitively via PotentCodables.
+        .package(url: "https://github.com/attaswift/BigInt.git", .upToNextMinor(from: "5.3.0")),
         .package(url: "https://github.com/leif-ibsen/Digest.git", from: "1.11.0"),
         .package(url: "https://github.com/tesseract-one/UncommonCrypto.swift.git",
                  .upToNextMinor(from: "0.2.1")),
@@ -52,7 +56,8 @@ let package = Package(
         .target(
             name: "SwiftCOSE",
             dependencies: [
-                "PotentCodables",
+                .product(name: "CBORCodable", package: "swift-cbor-codable"),
+                .product(name: "BigInt", package: "BigInt"),
                 .product(name: "Digest", package: "digest"),
                 .product(name: "UncommonCrypto", package: "UncommonCrypto.swift"),
                 .product(name: "X509", package: "swift-certificates"),

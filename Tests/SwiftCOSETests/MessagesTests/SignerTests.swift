@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-import PotentCBOR
+import CBORCodable
 import OrderedCollections
 @testable import SwiftCOSE
 
@@ -59,7 +59,7 @@ struct CoseSignatureTests {
         let protectedHdrMap = CBOR.map(phdr.mapKeysToCbor)
         let encoded = try CBORSerialization.data(from: protectedHdrMap)
         
-        let coseArray: CBOR.Array = [
+        let coseArray: [CBOR] = [
             CBOR.byteString(encoded),
             CBOR.map([CBOR.simple(1): CBOR(Es256().identifier!)]),
             CBOR.byteString(payload)
