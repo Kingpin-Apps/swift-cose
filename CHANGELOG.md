@@ -1,3 +1,9 @@
+## 0.2.1 (2026-05-26)
+
+### Fix
+
+- use correct package swift-cbor-codable
+
 ## 0.2.0 (2026-05-26)
 
 ### Refactor
