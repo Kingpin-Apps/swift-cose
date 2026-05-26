@@ -1,3 +1,9 @@
+## 0.2.0 (2026-05-26)
+
+### Refactor
+
+- migrate from PotentCBOR to CBORCodable
+
 ## 0.1.18 (2026-05-11)
 
 ### Fix
