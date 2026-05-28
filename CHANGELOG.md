@@ -1,3 +1,9 @@
+## 1.0.1 (2026-05-28)
+
+### Feat
+
+- bump swift-curve448 to 0.2.1 for vendored Ed448/X448 on Android+Wasm
+
 ## 1.0.0 (2026-05-28)
 
 ### Feat
