@@ -1,3 +1,9 @@
+## 1.1.0 (2026-05-28)
+
+### Feat
+
+- SHAKE via shared swift-goldilocks on Android/Wasm
+
 ## 1.0.1 (2026-05-28)
 
 ### Feat
