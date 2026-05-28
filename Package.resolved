@@ -1,5 +1,5 @@
 {
-  "originHash" : "1bde4788bde3efb2865da0e4e0c81e08808cbf4a0b4f2027de5fe04ab9a3a581",
+  "originHash" : "7dcb02e9e940457c0bfa9472bc8cf14863902cf5b4610060de7ae1e088a15ed6",
   "pins" : [
     {
       "identity" : "bigint",
@@ -87,8 +87,17 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-curve448.git",
       "state" : {
-        "revision" : "ef66c48dca773258090ae17e1cc4fb3c15cf2a44",
-        "version" : "0.2.1"
+        "revision" : "22485969852eeaf1160a8287fe2783607bde4d2d",
+        "version" : "0.2.2"
+      }
+    },
+    {
+      "identity" : "swift-goldilocks",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Kingpin-Apps/swift-goldilocks.git",
+      "state" : {
+        "revision" : "ae27bd2b74963107909f9bd5c9d1fbd4d0e0acbe",
+        "version" : "0.1.0"
       }
     },
     {

@@ -11,6 +11,9 @@ import OpenSSL
 #if canImport(CCOSEOpenSSL)
 import CCOSEOpenSSL
 #endif
+#if canImport(Goldilocks)
+import Goldilocks
+#endif
 
 public class HashAlgorithm: CoseAlgorithm {
     public var hashAlgorithm: CoseAlgorithmIdentifier
@@ -89,8 +92,18 @@ public class HashAlgorithm: CoseAlgorithm {
             throw CoseError.invalidAlgorithm("EVP_DigestFinalXOF failed for SHAKE")
         }
         return output
+        #elseif canImport(Goldilocks)
+        // libgoldilocks SHAKE — used on platforms without OpenSSL EVP
+        // (currently Android and Wasm). Self-contained Keccak impl shared
+        // with swift-curve448 via the swift-goldilocks package.
+        switch variant {
+        case .shake128:
+            return Goldilocks.SHAKE128.hash(data, outputByteCount: outputBytes)
+        case .shake256:
+            return Goldilocks.SHAKE256.hash(data, outputByteCount: outputBytes)
+        }
         #else
-        throw CoseError.invalidAlgorithm("SHAKE is unavailable on this platform (no OpenSSL EVP)")
+        throw CoseError.invalidAlgorithm("SHAKE is unavailable on this platform (no OpenSSL EVP, no Goldilocks)")
         #endif
     }
 }

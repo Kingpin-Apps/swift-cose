@@ -221,7 +221,13 @@ public class RSAKey: CoseKey {
         guard keyBits % 8 == 0 else {
             throw CoseError.invalidKey("Invalid key length")
         }
-        
+
+        // RSA prime generation uses OpenSSL/libcrypto's BN_generate_prime_ex
+        // (via BigUInteger.getPrime in Utils/Extensions.swift). Not yet
+        // implemented for platforms without libcrypto (Android, Wasm).
+        #if !(canImport(OpenSSL) || canImport(CCOSEOpenSSL))
+        throw CoseError.invalidKey("RSA key generation requires OpenSSL/libcrypto, unavailable on this platform")
+        #else
         // Generate prime numbers
         let p = try BigUInteger.getPrime(keyBits / 2)!
         let q = try BigUInteger.getPrime(keyBits / 2)!
@@ -252,8 +258,9 @@ public class RSAKey: CoseKey {
             extKey: extKey,
             optionalParams: additionalParams
         )
+        #endif
     }
-    
+
     /// Returns an initialized COSE Key object of type RSAKey.
     /// - Parameter coseKey: Dict containing COSE Key parameters and there values.
     /// - Returns: An initialized RSAKey key.
