@@ -1,3 +1,9 @@
+## 1.0.0 (2026-05-28)
+
+### Feat
+
+- drop Digest+UncommonCrypto, native CryptoKit/Crypto+OpenSSL EVP for SHAKE; fix SHA-384/512 to IANA spec
+
 ## 0.2.1 (2026-05-26)
 
 ### Fix
