@@ -1,5 +1,4 @@
 import Foundation
-import UncommonCrypto
 #if canImport(CryptoKit)
 import CryptoKit
 #else

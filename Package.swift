@@ -1,4 +1,4 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.1
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -19,20 +19,14 @@ let package = Package(
             targets: ["SwiftCOSE"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/attaswift/BigInt.git", .upToNextMinor(from: "5.3.0")),
-        .package(url: "https://github.com/leif-ibsen/Digest.git", from: "1.11.0"),
-        .package(url: "https://github.com/tesseract-one/UncommonCrypto.swift.git",
-                 .upToNextMinor(from: "0.2.1")),
         .package(url: "https://github.com/apple/swift-certificates.git", from: "1.6.1"),
-        // Prebuilt OpenSSL xcframework for Apple platforms only; Linux uses system libcrypto via COpenSSL target.
+        .package(url: "https://github.com/apple/swift-crypto.git", from: "3.15.1"),
+        .package(url: "https://github.com/attaswift/BigInt.git", .upToNextMinor(from: "5.3.0")),
         .package(url: "https://github.com/krzyzanowskim/OpenSSL-Package.git", .upToNextMinor(from: "3.3.2000")),
         .package(url: "https://github.com/21-DOT-DEV/swift-secp256k1", from: "0.22.0"),
         .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", .upToNextMinor(from: "1.9.0")),
         .package(url: "https://github.com/Kingpin-Apps/swift-curve448.git", from: "0.1.4"),
-        .package(url: "https://github.com/Kingpin-Apps/swift-cbor-codable.git", from: "0.2.0"),
-        // Provides Crypto-compatible APIs (SHA, HMAC, Curve25519, P256/P384/P521, AES.GCM, HKDF…)
-        // on Linux, where CryptoKit is unavailable.
-        .package(url: "https://github.com/apple/swift-crypto.git", from: "3.15.1"),
+        .package(url: "https://github.com/Kingpin-Apps/swift-cbor-codable.git", from: "0.3.1"),
     ],
     targets: [
         // System libcrypto on Linux — provides the same `BN_*` symbols that
@@ -55,8 +49,6 @@ let package = Package(
             dependencies: [
                 .product(name: "CBORCodable", package: "swift-cbor-codable"),
                 .product(name: "BigInt", package: "BigInt"),
-                .product(name: "Digest", package: "digest"),
-                .product(name: "UncommonCrypto", package: "UncommonCrypto.swift"),
                 .product(name: "X509", package: "swift-certificates"),
                 .product(
                     name: "OpenSSL",
@@ -69,11 +61,11 @@ let package = Package(
                 ),
                 .product(name: "P256K", package: "swift-secp256k1"),
                 .product(name: "SwiftCurve448", package: "swift-curve448"),
-                // Only link swift-crypto on Linux; on Apple platforms CryptoKit ships with the OS.
+                // Link swift-crypto on non-Apple platforms; CryptoKit ships with the OS on Apple.
                 .product(
                     name: "Crypto",
                     package: "swift-crypto",
-                    condition: .when(platforms: [.linux])
+                    condition: .when(platforms: [.linux, .android])
                 ),
                 "CryptoSwift",
 

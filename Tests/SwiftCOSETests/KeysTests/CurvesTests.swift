@@ -1,6 +1,5 @@
 import Testing
 import Foundation
-import UncommonCrypto
 import CryptoKit
 import P256K
 @testable import SwiftCOSE

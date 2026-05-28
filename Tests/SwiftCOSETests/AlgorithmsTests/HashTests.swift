@@ -52,8 +52,8 @@ struct HashAlgorithmsTests {
         let hashAlgorithm = Sha384()
         
         let hash = try hashAlgorithm.computeHash(data: data)
-        let expectedHash = "e516dabb23b6e30026863543282780a3ae0dccf05551cf0295178d7ff0f1b41eecb9db3ff219007c4e097260d58621bd".hexStringToData
-        
+        let expectedHash = "768412320f7b0aa5812fce428dc4706b3cae50e02a64caa16a782249bfe8efc4b7ef1ccb126255d196047dfedf17a0a9".hexStringToData
+
         #expect(hash == expectedHash, "SHA-384 hash does not match expected value.")
     }
     
@@ -62,8 +62,8 @@ struct HashAlgorithmsTests {
         let hashAlgorithm = Sha512()
         
         let hash = try hashAlgorithm.computeHash(data: data)
-        let expectedHash = "9ece086e9bac491fac5c1d1046ca11d737b92a2b2ebd93f005d7b710110c0a678288166e7fbe796883a4f2e9b3ca9f484f521d0ce464345cc1aec96779149c14".hexStringToData
-        
+        let expectedHash = "ee26b0dd4af7e749aa1a8ee3c10ae9923f618980772e473f8819a5d4940e0db27ac185f8a0e1d5f84f88bc887fd67b143732c304cc5fa9ad8e6f57f50028a8ff".hexStringToData
+
         #expect(hash == expectedHash, "SHA-512 hash does not match expected value.")
     }
     
@@ -73,10 +73,10 @@ struct HashAlgorithmsTests {
         
         let hash = try hashAlgorithm.computeHash(data: data)
         let expectedHash = Data([
-            0x9e, 0xce, 0x08, 0x6e, 0x9b, 0xac, 0x49, 0x1f,
-            0xac, 0x5c, 0x1d, 0x10, 0x46, 0xca, 0x11, 0xd7,
-            0x37, 0xb9, 0x2a, 0x2b, 0x2e, 0xbd, 0x93, 0xf0,
-            0x05, 0xd7, 0xb7, 0x10, 0x11, 0x0c, 0x0a, 0x67
+            0xee, 0x26, 0xb0, 0xdd, 0x4a, 0xf7, 0xe7, 0x49,
+            0xaa, 0x1a, 0x8e, 0xe3, 0xc1, 0x0a, 0xe9, 0x92,
+            0x3f, 0x61, 0x89, 0x80, 0x77, 0x2e, 0x47, 0x3f,
+            0x88, 0x19, 0xa5, 0xd4, 0x94, 0x0e, 0x0d, 0xb2
         ])
         
         #expect(hash == expectedHash, "SHA-512/256 hash does not match expected value.")

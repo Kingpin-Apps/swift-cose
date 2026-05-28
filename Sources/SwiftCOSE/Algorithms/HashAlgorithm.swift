@@ -1,11 +1,21 @@
 import Foundation
-import UncommonCrypto
-import Digest
+#if canImport(CryptoKit)
+import CryptoKit
+#endif
+#if canImport(Crypto)
+import Crypto
+#endif
+#if canImport(OpenSSL)
+import OpenSSL
+#endif
+#if canImport(CCOSEOpenSSL)
+import CCOSEOpenSSL
+#endif
 
 public class HashAlgorithm: CoseAlgorithm {
     public var hashAlgorithm: CoseAlgorithmIdentifier
     public var truncSize: Int?
-    
+
     public init(
         identifier: CoseAlgorithmIdentifier,
         fullname: String,
@@ -17,28 +27,24 @@ public class HashAlgorithm: CoseAlgorithm {
     }
 
     public func computeHash(data: Data) throws -> Data {
-        var hash: [UInt8]
+        let hash: [UInt8]
         switch hashAlgorithm {
             case .sha1:
-                hash = SHA1.hash(data: data)
+                hash = Array(Insecure.SHA1.hash(data: data))
             case .sha256, .sha256_64:
-                hash = SHA2.hash(type: .sha256, data: data)
+                hash = Array(SHA256.hash(data: data))
             case .sha384:
-                hash = SHA3.hash(type: .sha384, data: data)
+                hash = Array(SHA384.hash(data: data))
             case .sha512, .sha512_256:
-                hash = SHA3.hash(type: .sha512, data: data)
+                hash = Array(SHA512.hash(data: data))
             case .shake128:
-                let shake = SHAKE(.SHAKE128)
-                shake.update(data.toBytes)
-                hash = shake.digest(32)
+                hash = try Self.evpShake(data: data, outputBytes: 32, variant: .shake128)
             case .shake256:
-                let shake = SHAKE(.SHAKE256)
-                shake.update(data.toBytes)
-                hash = shake.digest(64)
+                hash = try Self.evpShake(data: data, outputBytes: 64, variant: .shake256)
             default:
                 throw CoseError.invalidAlgorithm("Unsupported hash algorithm")
         }
-        
+
         var digest = Data(hash)
 
         if let truncSize = truncSize {
@@ -46,6 +52,46 @@ public class HashAlgorithm: CoseAlgorithm {
         }
 
         return digest
+    }
+
+    private enum ShakeVariant {
+        case shake128
+        case shake256
+    }
+
+    private static func evpShake(data: Data, outputBytes: Int, variant: ShakeVariant) throws -> [UInt8] {
+        #if canImport(OpenSSL) || canImport(CCOSEOpenSSL)
+        guard let ctx = EVP_MD_CTX_new() else {
+            throw CoseError.invalidAlgorithm("EVP_MD_CTX_new failed")
+        }
+        defer { EVP_MD_CTX_free(ctx) }
+
+        let md = (variant == .shake128) ? EVP_shake128() : EVP_shake256()
+        guard EVP_DigestInit_ex(ctx, md, nil) == 1 else {
+            throw CoseError.invalidAlgorithm("EVP_DigestInit_ex failed for SHAKE")
+        }
+
+        let updateOK: Int32 = data.withUnsafeBytes { buf in
+            guard let base = buf.baseAddress, buf.count > 0 else {
+                return EVP_DigestUpdate(ctx, nil, 0)
+            }
+            return EVP_DigestUpdate(ctx, base, buf.count)
+        }
+        guard updateOK == 1 else {
+            throw CoseError.invalidAlgorithm("EVP_DigestUpdate failed for SHAKE")
+        }
+
+        var output = [UInt8](repeating: 0, count: outputBytes)
+        let finalOK: Int32 = output.withUnsafeMutableBufferPointer { buf in
+            EVP_DigestFinalXOF(ctx, buf.baseAddress, outputBytes)
+        }
+        guard finalOK == 1 else {
+            throw CoseError.invalidAlgorithm("EVP_DigestFinalXOF failed for SHAKE")
+        }
+        return output
+        #else
+        throw CoseError.invalidAlgorithm("SHAKE is unavailable on this platform (no OpenSSL EVP)")
+        #endif
     }
 }
 

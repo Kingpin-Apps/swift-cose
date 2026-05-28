@@ -4,7 +4,6 @@ import CryptoKit
 #else
 import Crypto
 #endif
-import UncommonCrypto
 
 /// Base class for ECDSA algorithms
 public class EcdsaAlgorithm: CoseAlgorithm {
