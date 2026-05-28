@@ -25,7 +25,7 @@ let package = Package(
         .package(url: "https://github.com/krzyzanowskim/OpenSSL-Package.git", .upToNextMinor(from: "3.3.2000")),
         .package(url: "https://github.com/21-DOT-DEV/swift-secp256k1", from: "0.22.0"),
         .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", .upToNextMinor(from: "1.9.0")),
-        .package(url: "https://github.com/Kingpin-Apps/swift-curve448.git", from: "0.1.4"),
+        .package(url: "https://github.com/Kingpin-Apps/swift-curve448.git", from: "0.2.1"),
         .package(url: "https://github.com/Kingpin-Apps/swift-cbor-codable.git", from: "0.3.1"),
     ],
     targets: [
