@@ -13,31 +13,22 @@ let package = Package(
       .visionOS(.v1)
     ],
     products: [
-        // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "SwiftCOSE",
             targets: ["SwiftCOSE"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-certificates.git", from: "1.6.1"),
-        .package(url: "https://github.com/apple/swift-crypto.git", from: "3.15.1"),
-        .package(url: "https://github.com/attaswift/BigInt.git", .upToNextMinor(from: "5.3.0")),
+        .package(url: "https://github.com/apple/swift-crypto.git", from: "4.5.0"),
+        .package(url: "https://github.com/attaswift/BigInt.git", from: "5.7.0"),
+        .package(url: "https://github.com/Kingpin-Apps/swift-curve448.git", from: "0.2.3"),
+        .package(url: "https://github.com/Kingpin-Apps/swift-cbor-codable.git", from: "0.3.1"),
         .package(url: "https://github.com/krzyzanowskim/OpenSSL-Package.git", .upToNextMinor(from: "3.3.2000")),
         .package(url: "https://github.com/21-DOT-DEV/swift-secp256k1", from: "0.22.0"),
         .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", .upToNextMinor(from: "1.9.0")),
-        .package(url: "https://github.com/Kingpin-Apps/swift-curve448.git", from: "0.2.2"),
-        .package(url: "https://github.com/Kingpin-Apps/swift-cbor-codable.git", from: "0.3.1"),
-        // Shared libgoldilocks vendor for SHAKE128/256 on platforms without a
-        // usable libcrypto (Android + Wasm). Same package swift-curve448 uses
-        // for Ed448/X448 — no duplicate vendoring.
         .package(url: "https://github.com/Kingpin-Apps/swift-goldilocks.git", from: "0.1.0"),
     ],
     targets: [
-        // System libcrypto on Linux — provides the same `BN_*` symbols that
-        // `OpenSSL-Package` ships prebuilt on Apple. Sources import either
-        // `OpenSSL` or `CCOSEOpenSSL` via `#if canImport(...)`. The unusual
-        // module name avoids collisions with similarly-named system-library
-        // targets in sibling packages (e.g. `swift-curve448` ships `COpenSSL`).
         .systemLibrary(
             name: "CCOSEOpenSSL",
             pkgConfig: "libcrypto",
@@ -46,8 +37,6 @@ let package = Package(
                 .yum(["openssl-devel"]),
             ]
         ),
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
         .target(
             name: "SwiftCOSE",
             dependencies: [

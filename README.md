@@ -4,6 +4,17 @@
 
 This project is a Swift implementation of the IETF CBOR Encoded Message Syntax (COSE). COSE has reached RFC status and is now available at RFC 8152.
 
+## Platform support
+
+| Platform | Status |
+|---|---|
+| iOS / macOS / watchOS / tvOS / visionOS | ✓ |
+| Linux | ✓ |
+| Android | ✓ |
+| WebAssembly (WASI) | ✗ — blocked upstream |
+
+WASM is blocked by `apple/swift-crypto`'s `_CryptoExtras` module (pulled in transitively via `swift-certificates`/`X509`): `Sources/_CryptoExtras/Util/ThreadSpecific/ThreadSpecific.swift` references a `ThreadOpsSystem` typealias that has no WASI implementation. Upstream itself is not green for WASM — see the [swift-crypto build matrix](https://swiftpackageindex.com/apple/swift-crypto/builds). We'll revisit when upstream lands WASI support.
+
 ## Usage
 To add SwiftCOSE as dependency to your Xcode project, select `File` > `Swift Packages` > `Add Package Dependency`, enter its repository URL: `https://github.com/Kingpin-Apps/swift-cose.git` and import `SwiftCOSE`.
 

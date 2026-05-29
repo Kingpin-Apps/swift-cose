@@ -1,13 +1,13 @@
 {
-  "originHash" : "7dcb02e9e940457c0bfa9472bc8cf14863902cf5b4610060de7ae1e088a15ed6",
+  "originHash" : "cd4ab910e417c3a8c156c6924a2b38ec6290558226d520da1042171f43522818",
   "pins" : [
     {
       "identity" : "bigint",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/attaswift/BigInt.git",
       "state" : {
-        "revision" : "0ed110f7555c34ff468e72e1686e59721f2b0da6",
-        "version" : "5.3.0"
+        "revision" : "e07e00fa1fd435143a2dcf8b7eec9a7710b2fdfe",
+        "version" : "5.7.0"
       }
     },
     {
@@ -51,8 +51,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-cbor-codable.git",
       "state" : {
-        "revision" : "a88d9020bba674cc8894665cceea2e005417f359",
-        "version" : "0.3.1"
+        "revision" : "51e206ef4b68703fad6fe7133c3b29a6ae25929b",
+        "version" : "0.3.2"
       }
     },
     {
@@ -78,8 +78,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/apple/swift-crypto.git",
       "state" : {
-        "revision" : "95ba0316a9b733e92bb6b071255ff46263bbe7dc",
-        "version" : "3.15.1"
+        "revision" : "1b6b2e274e85105bfa155183145a1dcfd63331f1",
+        "version" : "4.5.0"
       }
     },
     {
@@ -87,8 +87,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-curve448.git",
       "state" : {
-        "revision" : "22485969852eeaf1160a8287fe2783607bde4d2d",
-        "version" : "0.2.2"
+        "revision" : "fc11014aba38707db117a838da94b0db39d1fdc4",
+        "version" : "0.2.3"
       }
     },
     {
