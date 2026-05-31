@@ -97,11 +97,29 @@ struct HashAlgorithmsTests {
     @Test func testShake256() async throws {
         let data = "test".data(using: .utf8)!
         let hashAlgorithm = Shake256()
-        
+
         let hash = try hashAlgorithm.computeHash(data: data)
         let expectedHash = "b54ff7255705a71ee2925e4a3e30e41aed489a579d5595e0df13e32e1e4dd202a7c7f68b31d6418d9845eb4d757adda6ab189e1bb340db818e5b3bc725d992fa".hexStringToData
-        
+
         #expect(hash.count == 512 / 8, "SHAKE-256 hash length does not match expected value.")
         #expect(hash == expectedHash, "SHAKE-256 hash does not match expected value.")
+    }
+
+    // FIPS-202 reference vector: SHAKE-128 of empty input, truncated to 256 bits.
+    @Test func testShake128EmptyInput() async throws {
+        let hash = try Shake128().computeHash(data: Data())
+        let expectedHash = "7f9c2ba4e88f827d616045507605853ed73b8093f6efbc88eb1a6eacfa66ef26".hexStringToData
+
+        #expect(hash.count == 256 / 8)
+        #expect(hash == expectedHash, "SHAKE-128 empty-input hash does not match FIPS-202 reference vector.")
+    }
+
+    // FIPS-202 reference vector: SHAKE-256 of empty input, truncated to 512 bits.
+    @Test func testShake256EmptyInput() async throws {
+        let hash = try Shake256().computeHash(data: Data())
+        let expectedHash = "46b9dd2b0ba88d13233b3feb743eeb243fcd52ea62b81b82b50c27646ed5762fd75dc4ddd8c0f200cb05019d67b592f6fc821c49479ab48640292eacb3b7c4be".hexStringToData
+
+        #expect(hash.count == 512 / 8)
+        #expect(hash == expectedHash, "SHAKE-256 empty-input hash does not match FIPS-202 reference vector.")
     }
 }

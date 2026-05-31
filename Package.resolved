@@ -1,5 +1,5 @@
 {
-  "originHash" : "cd4ab910e417c3a8c156c6924a2b38ec6290558226d520da1042171f43522818",
+  "originHash" : "1d5c2f0b318088d593326e94983e0ca0b4a794ec5256c8c93dbea23f71a3f1c2",
   "pins" : [
     {
       "identity" : "bigint",
@@ -26,15 +26,6 @@
       "state" : {
         "revision" : "936ae66adccf1c91bcaeeb9c0cddde78a13695c3",
         "version" : "1.1.1"
-      }
-    },
-    {
-      "identity" : "openssl-package",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/krzyzanowskim/OpenSSL-Package.git",
-      "state" : {
-        "revision" : "71dbe0b4514cdaad95961470db72e8231f5943a6",
-        "version" : "3.3.3001"
       }
     },
     {
@@ -87,8 +78,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-curve448.git",
       "state" : {
-        "revision" : "fc11014aba38707db117a838da94b0db39d1fdc4",
-        "version" : "0.2.3"
+        "revision" : "ce923f01d5644ad32c4986d3feea6b03078e2ab1",
+        "version" : "0.3.0"
       }
     },
     {

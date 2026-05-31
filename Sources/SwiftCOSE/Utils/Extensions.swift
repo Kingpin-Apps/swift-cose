@@ -7,14 +7,6 @@ import Crypto
 import OrderedCollections
 import CBORCodable
 import CryptoSwift
-#if canImport(OpenSSL)
-import OpenSSL
-#elseif canImport(CCOSEOpenSSL)
-import CCOSEOpenSSL
-#endif
-// Note: on platforms without OpenSSL/libcrypto (Android, Wasm), neither
-// module imports — RSA prime generation below is conditionally compiled
-// out and RSAKey.generateKey() throws at runtime there.
 
 
 // MARK: - Curve25519.KeyAgreement.PublicKey Extensions
@@ -258,33 +250,3 @@ extension RSA {
     }
 }
 
-// MARK: CS.BigUInt extension
-
-#if canImport(OpenSSL) || canImport(CCOSEOpenSSL)
-extension BigUInteger {
-
-  public static func getPrime(_ bits: Int = 1024) throws -> BigUInteger? {
-      let bn = BN_new()       // Create a new BIGNUM object
-      let ctx = BN_CTX_new()  // Create a new BN context for calculations
-
-      defer {
-          BN_free(bn)
-          BN_CTX_free(ctx)
-      }
-
-      // Generate a prime number with the specified bit length
-      if BN_generate_prime_ex(bn, Int32(bits), 1, nil, nil, nil) == 1 {
-          // Get the raw bytes from BIGNUM
-         let byteCount = (BN_num_bits(bn) + 7) / 8
-          var buffer = [UInt8](repeating: 0, count: Int(byteCount))
-
-         BN_bn2bin(bn, &buffer)
-
-         // Convert to BigUInteger directly from bytes
-         return BigUInteger(Data(buffer))
-      } else {
-          throw CoseError.openSSLError("Failed to generate prime number")
-      }
-  }
-}
-#endif

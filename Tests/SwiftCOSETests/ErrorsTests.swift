@@ -93,11 +93,6 @@ struct CoseErrorTests {
         #expect(validateErrorCase(error, expected: "Feature not available"))
     }
     
-    @Test func testCoseErrorOpenSSLError() async throws {
-        let error = CoseError.openSSLError("OpenSSL failure")
-        #expect(validateErrorCase(error, expected: "OpenSSL failure"))
-    }
-    
     @Test func testCoseErrorUnknownAttribute() async throws {
         let error = CoseError.unknownAttribute("Unknown attribute encountered")
         #expect(validateErrorCase(error, expected: "Unknown attribute encountered"))
@@ -140,7 +135,6 @@ struct CoseErrorTests {
              .invalidRecipientConfiguration(let message),
              .malformedMessage(let message),
              .notImplemented(let message),
-             .openSSLError(let message),
              .unknownAttribute(let message),
              .unsupportedCurve(let message),
              .unsupportedRecipient(let message),

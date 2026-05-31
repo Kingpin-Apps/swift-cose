@@ -222,34 +222,15 @@ public class RSAKey: CoseKey {
             throw CoseError.invalidKey("Invalid key length")
         }
 
-        // RSA prime generation uses OpenSSL/libcrypto's BN_generate_prime_ex
-        // (via BigUInteger.getPrime in Utils/Extensions.swift). Not yet
-        // implemented for platforms without libcrypto (Android, Wasm).
-        #if !(canImport(OpenSSL) || canImport(CCOSEOpenSSL))
-        throw CoseError.invalidKey("RSA key generation requires OpenSSL/libcrypto, unavailable on this platform")
-        #else
-        // Generate prime numbers
-        let p = try BigUInteger.getPrime(keyBits / 2)!
-        let q = try BigUInteger.getPrime(keyBits / 2)!
-        
-        // Calculate modulus
-        let n = p * q
-
-        // Calculate public and private exponent
-        let e: BigUInteger = 65537
-        let phi = (p - 1) * (q - 1)
-        guard let d = e.inverse(phi) else {
-          throw RSA.Error.invalidInverseNotCoprimes
+        let extKey = try CryptoSwift.RSA(keySize: keyBits)
+        guard let primes = extKey.primes else {
+            throw CoseError.invalidKey("RSA key generation did not return primes")
         }
 
-        let extKey = try CryptoSwift.RSA(n: n, e: e, d: d, p: p, q: q)
-        
-        var additionalParams: [AnyHashable : Any] = [
-            RSAKpP():toBstr(p),
-            RSAKpQ():toBstr(q),
-        ] as! [AnyHashable : Any]
-        
-        // Merge optional params
+        var additionalParams: [AnyHashable: Any] = [
+            RSAKpP(): toBstr(primes.p),
+            RSAKpQ(): toBstr(primes.q),
+        ]
         for (key, value) in optionalParams {
             additionalParams[key] = value
         }
@@ -258,7 +239,6 @@ public class RSAKey: CoseKey {
             extKey: extKey,
             optionalParams: additionalParams
         )
-        #endif
     }
 
     /// Returns an initialized COSE Key object of type RSAKey.

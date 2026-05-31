@@ -21,7 +21,6 @@ enum CoseError: Error {
     case invalidRecipientConfiguration(String)
     case malformedMessage(String)
     case notImplemented(String)
-    case openSSLError(String)
     case unknownAttribute(String)
     case unsupportedCurve(String)
     case unsupportedRecipient(String)
