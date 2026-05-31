@@ -1,3 +1,13 @@
+## 1.3.0 (2026-05-31)
+
+### Refactor
+
+- drop direct OpenSSL-Package dependency: SHAKE-128/256 now use shared swift-goldilocks on all platforms (was: Apple/Linux on OpenSSL EVP, Android/Wasm on Goldilocks); RSA keygen now uses CryptoSwift's `RSA(keySize:)` (was: OpenSSL `BN_generate_prime_ex`)
+- delete `CCOSEOpenSSL` system-library target and the Linux `libssl-dev`/`openssl-devel` runtime requirement
+- RSA keygen now runs on Android/Wasi (previously threw); probable primes match FIPS 186-5 / BoringSSL / swift-crypto `_RSA` (was: safe primes via OpenSSL — slower for no security benefit at modern key sizes)
+- RSA keygen measured **3.1×–12× faster** on M1 Max (1.92s vs 6.27s at 2048-bit; 17.7s vs 210s at 4096-bit)
+- bump swift-curve448 to 0.3.0, which itself dropped OpenSSL-Package — downstream Mach-Os no longer load `@rpath/OpenSSL.framework` transitively
+
 ## 1.2.0 (2026-05-29)
 
 ### Fix
