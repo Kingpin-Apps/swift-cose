@@ -25,7 +25,7 @@ let package = Package(
         .package(url: "https://github.com/Kingpin-Apps/swift-cbor-codable.git", from: "0.3.1"),
         .package(url: "https://github.com/21-DOT-DEV/swift-secp256k1", from: "0.22.0"),
         .package(url: "https://github.com/krzyzanowskim/CryptoSwift.git", .upToNextMinor(from: "1.9.0")),
-        .package(url: "https://github.com/Kingpin-Apps/swift-goldilocks.git", from: "0.1.0"),
+        .package(url: "https://github.com/Kingpin-Apps/swift-goldilocks.git", from: "0.1.1"),
     ],
     targets: [
         .target(
@@ -49,7 +49,14 @@ let package = Package(
         ),
         .testTarget(
             name: "SwiftCOSETests",
-            dependencies: ["SwiftCOSE"],
+            dependencies: [
+                "SwiftCOSE",
+                .product(
+                    name: "Crypto",
+                    package: "swift-crypto",
+                    condition: .when(platforms: [.linux, .android])
+                ),
+            ],
             resources: [
                .copy("data")
            ]

@@ -117,8 +117,35 @@ struct Sign1MessageTests {
         }
     }
     
+    @Test func testDecodeWithIntegerKidHeaderRoundTrip() async throws {
+        // Regression: COSE_Sign1 with KID() (integer header id 4) in the
+        // protected header. On swift-corelibs-foundation (Linux/Windows) the
+        // CBOR-decoded map keys come back as UInt64 and fail the `as? Int`
+        // downcast in CoseHeaderAttribute.fromId, breaking phdr[KID()] lookup.
+        // CoseHeaderAttribute.fromId must accept any BinaryInteger.
+        let kid = Data([0x6b, 0x69, 0x64, 0x2d, 0x31])
+
+        let phdr: OrderedDictionary<CoseHeaderAttribute, Any> = [
+            Algorithm(): Es256(),
+            KID(): kid,
+        ]
+        let curve = try CoseCurve.fromId(for: CoseCurveIdentifier.p256)
+        let key = try EC2Key.generateKey(curve: curve)
+
+        let encoded = try Sign1Message(
+            phdr: phdr,
+            payload: Data("payload".utf8),
+            key: key
+        ).encode()
+
+        let decoded = try CoseMessage.decode(Sign1Message.self, from: encoded)
+
+        #expect(decoded.phdr[KID()] as? Data == kid)
+        #expect(decoded.phdr[Algorithm()] as? Es256 == Es256())
+    }
+
     // MARK: - Signature Structure Tests
-    
+
     @Test func testSignatureStructure() async throws {
         let sign1Message = Sign1Message(
             payload: Data("Signature Test".utf8)

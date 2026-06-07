@@ -120,6 +120,27 @@ struct CoseKeyTests {
     }
     
     @Test
+    func testCoseKeyDecodeNormalizesIntegerKeys() async throws {
+        // Regression: on swift-corelibs-foundation (Linux/Windows) the CBOR
+        // map keys come back as UInt64, which do not match Int-keyed lookups
+        // via NSNumber bridging. CoseKey.decode must normalize them to Int
+        // so that fromDictionary's `received[kpKty.identifier]` lookup
+        // (where identifier is Int) succeeds.
+        let key = "a401010327200621582060545b786d3a6f903158e35aae9b86548a99bc47d4b0a6f503ab5e78c1a9bbfc"
+
+        let decoded = try CoseKey.decode(Data(hex: key))
+
+        #expect(decoded != nil)
+        #expect(decoded!.kty == KtyOKP())
+        // The store must be keyed by Int (not UInt64/Int64) so subsequent
+        // lookups by KeyParam.identifier (which is Int) hit.
+        for k in decoded!.store.keys {
+            #expect(!(k.base is UInt64), "decoded store key \(k) should not be UInt64")
+            #expect(!(k.base is Int64), "decoded store key \(k) should not be Int64")
+        }
+    }
+
+    @Test
     func testDecodeInvalidData() async throws {
         let invalidData = Data([0x01, 0x02])
         

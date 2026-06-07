@@ -97,9 +97,10 @@ open class CoseHeaderAttribute: CoseAttribute {
     
     public static func fromId(for attribute: Any) throws -> CoseHeaderAttribute {
         switch attribute {
-            case let id as Int:
-                // If the identifier is an Int, convert it to CoseHeaderIdentifier
-                guard let hdr = CoseHeaderIdentifier(rawValue: id) else {
+            case let id as any BinaryInteger:
+                // Accept any integer width — on swift-corelibs-foundation (Linux/Windows),
+                // CBOR decode yields UInt64/Int64 keys that do not bridge to Int via `as?`.
+                guard let hdr = CoseHeaderIdentifier(rawValue: Int(id)) else {
                     throw CoseError.invalidHeader("Unknown header identifier")
                 }
                 return getInstance(for: hdr)

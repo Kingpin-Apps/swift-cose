@@ -221,12 +221,26 @@ public class CoseKey: CustomStringConvertible {
         let cbor = try CBORSerialization.cbor(from: received)
         let mapValue = cbor.mapValue ?? [:]
         let dict = mapValue.reduce(into: [AnyHashable: Any]()) { result, entry in
-            let k = entry.key.unwrapped!
-            let v = entry.value.unwrapped!
-            
+            let k = normalizeInt(entry.key.unwrapped!)
+            let v = normalizeInt(entry.value.unwrapped!)
+
             result[k as! AnyHashable] = v
         }
         return try fromDictionary(dict)
+    }
+
+    /// Coerce CBOR-decoded integers (`UInt64` / `Int64` from CBORCodable's unwrap)
+    /// down to `Int` so dictionary lookups by `Int` key succeed on
+    /// swift-corelibs-foundation (Linux/Windows), where `NSNumber` bridging is absent.
+    private static func normalizeInt(_ value: Any) -> Any {
+        switch value {
+        case let v as UInt64 where v <= UInt64(Int.max):
+            return Int(v)
+        case let v as Int64 where v >= Int64(Int.min) && v <= Int64(Int.max):
+            return Int(v)
+        default:
+            return value
+        }
     }
     
     /// Initialize a COSE key from a dictionary.

@@ -1,6 +1,5 @@
 import Testing
 import Foundation
-import CryptoKit
 import CryptoSwift
 @testable import SwiftCOSE
 

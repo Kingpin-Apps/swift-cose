@@ -69,6 +69,23 @@ struct HeadersTests {
     
     // MARK: - CoseHeaderAttribute Tests
     
+    @Test func testCoseHeaderAttributeFromIdWithBinaryIntegerTypes() async throws {
+        // Regression: on swift-corelibs-foundation (Linux/Windows) CBOR decode
+        // yields integer header keys as UInt64/Int64, which do not bridge to Int
+        // via `as?`. The BinaryInteger case in fromId(for:) must accept them all.
+        let kid = KID()
+
+        #expect(try CoseHeaderAttribute.fromId(for: UInt64(4)) == kid)
+        #expect(try CoseHeaderAttribute.fromId(for: Int64(4)) == kid)
+        #expect(try CoseHeaderAttribute.fromId(for: Int(4)) == kid)
+        #expect(try CoseHeaderAttribute.fromId(for: UInt(4)) == kid)
+        #expect(try CoseHeaderAttribute.fromId(for: Int32(4)) == kid)
+
+        // Negative identifiers still resolve via signed integer types.
+        #expect(try CoseHeaderAttribute.fromId(for: Int64(-1)) == EphemeralKey())
+        #expect(try CoseHeaderAttribute.fromId(for: Int(-1)) == EphemeralKey())
+    }
+
     @Test func testCoseHeaderAttributeFromIdFail() async throws {
         #expect(throws: CoseError.self) {
             let _ = try CoseHeaderAttribute.fromId(for: [])

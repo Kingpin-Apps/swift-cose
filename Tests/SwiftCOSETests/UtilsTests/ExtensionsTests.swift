@@ -1,6 +1,10 @@
 import Testing
 import Foundation
+#if canImport(CryptoKit)
 import CryptoKit
+#else
+import Crypto
+#endif
 import CryptoSwift
 import CBORCodable
 import SwiftCurve448

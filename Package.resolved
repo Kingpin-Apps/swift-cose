@@ -1,5 +1,5 @@
 {
-  "originHash" : "1d5c2f0b318088d593326e94983e0ca0b4a794ec5256c8c93dbea23f71a3f1c2",
+  "originHash" : "3b85fda75dc4511c56cd6b9523e23418582b8691933ec92505c1c2b60379103a",
   "pins" : [
     {
       "identity" : "bigint",
@@ -87,8 +87,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-goldilocks.git",
       "state" : {
-        "revision" : "ae27bd2b74963107909f9bd5c9d1fbd4d0e0acbe",
-        "version" : "0.1.0"
+        "revision" : "44a49050ca59c32d974af84d5828b70cea596e3f",
+        "version" : "0.1.1"
       }
     },
     {
