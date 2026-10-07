@@ -1,13 +1,13 @@
 {
-  "originHash" : "3b85fda75dc4511c56cd6b9523e23418582b8691933ec92505c1c2b60379103a",
+  "originHash" : "c71701f9da752e04b89e5daf6a6049ecf446362ca72894082aba164fa73e5efa",
   "pins" : [
     {
       "identity" : "bigint",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/attaswift/BigInt.git",
       "state" : {
-        "revision" : "e07e00fa1fd435143a2dcf8b7eec9a7710b2fdfe",
-        "version" : "5.7.0"
+        "revision" : "63feef7820abb1a8fb08587d7da56bb0b7db8751",
+        "version" : "6.0.1"
       }
     },
     {
@@ -42,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-cbor-codable.git",
       "state" : {
-        "revision" : "51e206ef4b68703fad6fe7133c3b29a6ae25929b",
-        "version" : "0.3.2"
+        "revision" : "98fc0f0138329593237cbbc2991de1da17d41b55",
+        "version" : "0.3.4"
       }
     },
     {
