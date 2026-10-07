@@ -1,3 +1,9 @@
+## 1.3.3 (2026-10-07)
+
+### Fix
+
+- **deps**: accept CryptoSwift 1.10 and later 1.x
+
 ## 1.3.2 (2026-10-07)
 
 ### Fix
