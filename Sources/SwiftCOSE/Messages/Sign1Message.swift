@@ -76,18 +76,16 @@ public class Sign1Message: SignCommon {
                 payloadItem,
                 CBOR.byteString(computedSignature),
             ]
-        } else if !signature.isEmpty {
+        } else {
+            // Re-emit the signature already held; COSE_Sign1 always has one.
+            guard !signature.isEmpty else {
+                throw CoseError.valueError("No signature to encode; use sign: true or set signature.")
+            }
             cborMessage = [
                 CBOR.byteString(phdrEncoded),
                 CBOR.fromAny(uhdrEncoded),
                 payloadItem,
                 CBOR.byteString(signature),
-            ]
-        } else {
-            cborMessage = [
-                CBOR.byteString(phdrEncoded),
-                CBOR.fromAny(uhdrEncoded),
-                payloadItem,
             ]
         }
 

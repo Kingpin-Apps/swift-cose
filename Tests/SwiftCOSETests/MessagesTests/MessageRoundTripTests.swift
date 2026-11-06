@@ -498,3 +498,57 @@ struct MessageRoundTripTests {
         #expect(decoded.payload == Data([0xFF, 0x00, 0x1C]))
     }
 }
+
+/// Encoding without recomputing the tag or signature re-emits the one the
+/// message holds, so the output is always a complete structure.
+struct EncodeWithoutRecomputingTests {
+    static let payload = Data("payload".utf8)
+    
+    @Test func testMac0EncodeWithoutMacReusesTag() async throws {
+        let key = try CoseSymmetricKey.generateKey(keyLength: 32)
+        let msg = Mac0Message(phdr: [Algorithm(): Hmac256()], payload: Self.payload, key: key)
+        let maced = try msg.encode()
+        
+        let decoded = try CoseMessage.decode(Mac0Message.self, from: maced)
+        let reencoded = try decoded.encode(mac: false)
+        #expect(reencoded == maced)
+        #expect(try CBORSerialization.cbor(from: reencoded).taggedValue?.1.arrayValue?.count == 4)
+    }
+    
+    @Test func testMac0EncodeWithoutMacThrowsWithoutTag() async throws {
+        let msg = Mac0Message(phdr: [Algorithm(): Hmac256()], payload: Self.payload)
+        #expect(throws: CoseError.self) {
+            _ = try msg.encode(mac: false)
+        }
+    }
+    
+    @Test func testMacEncodeWithoutMacReusesTag() async throws {
+        let key = try CoseSymmetricKey.generateKey(keyLength: 32)
+        let msg = MacMessage(
+            phdr: [Algorithm(): Hmac256()],
+            payload: Self.payload,
+            key: key,
+            recipients: [DirectEncryption(uhdr: [Algorithm(): Direct()])]
+        )
+        let maced = try msg.encode()
+        
+        let decoded = try CoseMessage.decode(MacMessage.self, from: maced)
+        #expect(try decoded.encode(mac: false) == maced)
+        
+        let fresh = MacMessage(
+            phdr: [Algorithm(): Hmac256()],
+            payload: Self.payload,
+            recipients: [DirectEncryption(uhdr: [Algorithm(): Direct()])]
+        )
+        #expect(throws: CoseError.self) {
+            _ = try fresh.encode(mac: false)
+        }
+    }
+    
+    @Test func testSign1EncodeWithoutSigningThrowsWithoutSignature() async throws {
+        let msg = Sign1Message(phdr: [Algorithm(): Es256()], payload: Self.payload)
+        #expect(throws: CoseError.self) {
+            _ = try msg.encode(sign: false)
+        }
+    }
+}

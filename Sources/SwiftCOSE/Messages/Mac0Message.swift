@@ -54,7 +54,7 @@ public class Mac0Message: MacCommon {
     /// Encode and protect the COSE_Mac0 message.
     /// - Parameters:
     ///   - tag: Whether to include the CBOR tag.
-    ///   - mac: Whether to compute the MAC tag.
+    ///   - mac: Whether to compute the MAC tag. When false, the tag already in `authTag` is encoded.
     /// - Returns: The encoded message as `Data`.
     public func encode(tag: Bool = true, mac: Bool = true) throws -> Data {
         var message: [CBOR] = []
@@ -68,10 +68,16 @@ public class Mac0Message: MacCommon {
                 CBOR.byteString(computedTag)
             ]
         } else {
+            // Re-emit the tag already held (for example from decoding);
+            // the structure always carries one.
+            guard !authTag.isEmpty else {
+                throw CoseError.valueError("No authentication tag to encode; use mac: true or set authTag.")
+            }
             message = [
                 CBOR.byteString(phdrEncoded),
                 CBOR.fromAny(uhdrEncoded),
-                payload.map { CBOR.byteString($0) } ?? CBOR.null
+                payload.map { CBOR.byteString($0) } ?? CBOR.null,
+                CBOR.byteString(authTag)
             ]
         }
         
