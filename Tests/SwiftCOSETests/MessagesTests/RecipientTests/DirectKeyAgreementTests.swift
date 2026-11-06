@@ -99,12 +99,15 @@ struct DirectKeyAgreementTests {
     // MARK: - Test Missing KDF Context Attributes
     
     @Test func testKDFContextMissingAttributes() async throws {
+        // RFC 9053, section 5.2: the PartyU and PartyV fields are optional
+        // and are encoded as nil when the headers do not carry them.
         let keyAgreement = DirectKeyAgreement()
         let algorithm = A128KW()
         
-        #expect(throws: CoseError.self) {
-            _ = try keyAgreement.getKDFContext(algorithm: algorithm)
-        }
+        let kdfContext = try keyAgreement.getKDFContext(algorithm: algorithm)
+        #expect(kdfContext.partyUInfo.identity == nil)
+        #expect(kdfContext.partyVInfo.identity == nil)
+        #expect(kdfContext.partyUInfo.encode() == [CBOR.null, CBOR.null, CBOR.null])
     }
     
     // MARK: - Test Key Agreement with No Key

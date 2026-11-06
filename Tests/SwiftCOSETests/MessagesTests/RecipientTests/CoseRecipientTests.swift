@@ -133,13 +133,14 @@ struct CoseRecipientTests {
     
     // MARK: - Test KDFContext
     
-    @Test func testGetKDFContextFail() async throws {
+    @Test func testGetKDFContextWithoutPartyInfo() async throws {
+        // RFC 9053, section 5.2: PartyU/PartyV fields are optional (nil).
         let coseRecipient = CoseRecipient()
         let alg = A128KW()
         
-        #expect(throws: CoseError.self) {
-            _ = try coseRecipient.getKDFContext(algorithm: alg)
-        }
+        let context = try coseRecipient.getKDFContext(algorithm: alg)
+        #expect(context.partyUInfo.encode() == [CBOR.null, CBOR.null, CBOR.null])
+        #expect(context.partyVInfo.encode() == [CBOR.null, CBOR.null, CBOR.null])
     }
     
     // MARK: - Test KDF Context Creation

@@ -232,24 +232,27 @@ public class CoseRecipient: CoseMessage {
     /// - Returns: A `CoseKDFContext` object.
     func getKDFContext(algorithm: EncAlgorithm) throws -> CoseKDFContext {
         
-        // Extract PartyU information
-        let uID = try getAttr(PartyUID()) as? Data
-        let uNonce = try getAttr(PartyUNonce()) as? Data
-        let uOther = try getAttr(PartyUOther()) as? Data
+        // Extract PartyU information (each field is optional)
+        let uID = (try? getAttr(PartyUID())) as? Data
+        let uNonce = (try? getAttr(PartyUNonce())) as? Data
+        let uOther = (try? getAttr(PartyUOther())) as? Data
         let partyU = PartyInfo(identity: uID, nonce: uNonce, other: uOther)
         
-        // Extract PartyV information
-        let vID = try getAttr(PartyVID()) as? Data
-        let vNonce = try getAttr(PartyVNonce()) as? Data
-        let vOther = try getAttr(PartyVOther()) as? Data
+        // Extract PartyV information (each field is optional)
+        let vID = (try? getAttr(PartyVID())) as? Data
+        let vNonce = (try? getAttr(PartyVNonce())) as? Data
+        let vOther = (try? getAttr(PartyVOther())) as? Data
         let partyV = PartyInfo(identity: vID, nonce: vNonce, other: vOther)
         
-        // Create the SuppPubInfo
-        let keyLength = algorithm.keyLength
+        // Create the SuppPubInfo over the recipient's encoded protected header
+        guard let keyLength = algorithm.keyLength else {
+            throw CoseError.invalidAlgorithm("The target algorithm has no key length.")
+        }
         let suppPubOther = localAttrs[SuppPubOther()] as? Data ?? Data()
         let suppPub = try SuppPubInfo(
-            keyDataLength: keyLength!,
+            keyDataLength: keyLength,
             protected: self.phdr,
+            protectedEncoded: self.phdrEncoded,
             other: suppPubOther
         )
         

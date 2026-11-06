@@ -40,16 +40,44 @@ struct ContextTests {
                 .unsignedInt(UInt64(suppPubInfo.keyDataLength * 8)),
             "First element should match identity data."
         )
+        // RFC 9053, section 5.2: protected is the serialized header map and
+        // other is a byte string.
         #expect(
-            encoded[1] == CBOR.map(suppPubInfo.protected.mapKeysToCbor),
-            "Second element should be empty Data."
+            encoded[1] == CBOR.byteString(
+                try CBORSerialization.data(from: .map(suppPubInfo.protected.mapKeysToCbor))
+            ),
+            "Second element should be the serialized protected header."
         )
-        
-        let othorCBOR = try! CBORSerialization.cbor(from: suppPubInfo.other)
         #expect(
-            encoded[2] == othorCBOR,
-            "Third element should be empty Data."
+            encoded[2] == CBOR.byteString(suppPubInfo.other),
+            "Third element should be the other bytes."
         )
+    }
+    
+    @Test func testPartyInfoEncodesAbsentFieldsAsNil() async throws {
+        let encoded = PartyInfo().encode()
+        #expect(encoded == [CBOR.null, CBOR.null, CBOR.null])
+    }
+    
+    @Test func testSuppPubInfoKeepsReceivedProtectedBytes() async throws {
+        let suppPubInfo = try SuppPubInfo(
+            keyDataLength: 16,
+            protected: [Algorithm(): EcdhEsHKDF256()],
+            protectedEncoded: Data(hex: "A1013818")
+        )
+        #expect(try suppPubInfo.encode()[1] == CBOR.byteString(Data(hex: "A1013818")))
+    }
+    
+    /// COSE WG example ecdh-direct-examples/p256-hkdf-256-01.json, Context_hex.
+    @Test func testCoseKDFContextExample() async throws {
+        let context = CoseKDFContext(
+            algorithm: A128GCM(),
+            suppPubInfo: try SuppPubInfo(
+                keyDataLength: 16,
+                protected: [Algorithm(): EcdhEsHKDF256()]
+            )
+        )
+        #expect(try context.encode() == Data(hex: "840183F6F6F683F6F6F682188044A1013818"))
     }
     
     @Test func testSuppPubInfoInvalidKeyLength() async throws {

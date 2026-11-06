@@ -7,11 +7,12 @@ public struct PartyInfo {
     var nonce: Data? = nil
     var other: Data? = nil
 
+    /// RFC 9053, section 5.2: each field is a byte string, or nil when absent.
     func encode() -> [CBOR] {
         return [
-            CBOR(identity ?? Data()),
-            CBOR(nonce ?? Data()),
-            CBOR(other ?? Data())
+            identity.map { CBOR.byteString($0) } ?? CBOR.null,
+            nonce.map { CBOR.byteString($0) } ?? CBOR.null,
+            other.map { CBOR.byteString($0) } ?? CBOR.null
         ]
     }
 }
@@ -19,6 +20,9 @@ public struct PartyInfo {
 public struct SuppPubInfo {
     private var _keyDataLength: Int
     var protected: OrderedDictionary<CoseHeaderAttribute, Any> = [:]
+    /// The recipient's protected header exactly as encoded in the message.
+    /// When nil, `protected` is encoded instead.
+    var protectedEncoded: Data? = nil
     var other: Data = Data()
     
     /// The length of the derived key in bytes.
@@ -35,29 +39,38 @@ public struct SuppPubInfo {
         }
     }
 
-    init(keyDataLength: Int, protected: OrderedDictionary<CoseHeaderAttribute, Any> = [:], other: Data = Data()) throws {
+    init(keyDataLength: Int, protected: OrderedDictionary<CoseHeaderAttribute, Any> = [:], protectedEncoded: Data? = nil, other: Data = Data()) throws {
         guard [16, 24, 32].contains(keyDataLength) else {
             throw CoseError.valueError("Not a valid key length: \(keyDataLength)")
         }
         self._keyDataLength = keyDataLength
         self.protected = protected
+        self.protectedEncoded = protectedEncoded
         self.other = other
     }
     
     ///  Encodes the supplementary public information.
+    ///
+    /// RFC 9053, section 5.2:
+    /// `[keyDataLength: uint, protected: empty_or_serialized_map, ? other: bstr]`
     /// - Returns: A CBOR array representing the supplementary public information.
     func encode() throws -> [CBOR] {
+        let protectedBytes: Data
+        if let protectedEncoded {
+            protectedBytes = protectedEncoded
+        } else if protected.isEmpty {
+            protectedBytes = Data()
+        } else {
+            protectedBytes = try CBORSerialization.data(from: .map(protected.mapKeysToCbor))
+        }
+        
         var info: [CBOR] = [
             CBOR.unsignedInt(UInt64(keyDataLength * 8)),
-            CBOR.map(protected.mapKeysToCbor)
+            CBOR.byteString(protectedBytes)
         ]
         
         if !other.isEmpty {
-            do {
-                info.append(try CBORSerialization.cbor(from: other))
-            } catch {
-                throw CoseError.valueError("Failed to encode `other` data: \(error)")
-            }
+            info.append(CBOR.byteString(other))
         }
         return info
     }
@@ -88,7 +101,7 @@ public struct CoseKDFContext {
         ]
 
         if !suppPrivInfo.isEmpty {
-            context.append(try! CBORSerialization.cbor(from: suppPrivInfo))
+            context.append(CBOR.byteString(suppPrivInfo))
         }
 
         return try CBORSerialization.data(from: .array(context))
