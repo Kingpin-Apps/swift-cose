@@ -22,6 +22,16 @@ public class CoseRecipient: CoseMessage {
     private var _recipients: [CoseRecipient] = []
     
     // MARK: - Abstract Methods
+    /// Decodes a COSE recipient.
+    ///
+    /// Without this override, `SomeRecipient.fromCoseObject(coseObj:)` would
+    /// pick `CoseMessage`'s overload (it has no defaulted argument) and skip
+    /// the recipient's own checks. Every call now goes through
+    /// ``fromCoseObject(coseObj:context:)`` of the class it is made on.
+    public override class func fromCoseObject(coseObj: [CBOR]) throws -> CoseRecipient {
+        return try fromCoseObject(coseObj: coseObj, context: nil)
+    }
+    
     public class func fromCoseObject(coseObj: [CBOR], context: String? = nil) throws -> CoseRecipient {
         // COSE_recipient = [protected, unprotected, ciphertext, ? recipients]
         guard coseObj.count == 3 || coseObj.count == 4 else {

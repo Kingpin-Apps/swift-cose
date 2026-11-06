@@ -29,6 +29,11 @@ public class DirectEncryption: CoseRecipient {
     }
 
     // MARK: - Methods
+    /// Decodes this recipient type, with its checks; see ``CoseRecipient/fromCoseObject(coseObj:)``.
+    public override class func fromCoseObject(coseObj: [CBOR]) throws -> DirectEncryption {
+        return try fromCoseObject(coseObj: coseObj, context: nil)
+    }
+    
     public override class func fromCoseObject(coseObj: [CBOR], context: String? = nil) throws -> DirectEncryption {
         
         let msg = try super.fromCoseObject(

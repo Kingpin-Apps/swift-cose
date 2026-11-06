@@ -219,3 +219,42 @@ struct CoseRecipientTests {
         }
     }
 }
+
+/// `Recipient.fromCoseObject(coseObj:)` with no context must still run the
+/// recipient class's own checks and return that class.
+struct RecipientDecodeOverloadTests {
+    static let emptyCiphertext: [CBOR] = [
+        CBOR.byteString(Data()),
+        CBOR.map([CBOR.unsignedInt(1): CBOR(A128KW().identifier!)]),
+        CBOR.byteString(Data())
+    ]
+    
+    @Test func testKeyAgreementWithKeyWrapChecksRunWithoutContext() async throws {
+        #expect(throws: CoseError.self) {
+            _ = try KeyAgreementWithKeyWrap.fromCoseObject(coseObj: Self.emptyCiphertext)
+        }
+    }
+    
+    @Test func testDirectEncryptionChecksRunWithoutContext() async throws {
+        // DIRECT_ENCRYPTION must have a zero-length ciphertext.
+        let withCiphertext: [CBOR] = [
+            CBOR.byteString(Data()),
+            CBOR.map([CBOR.unsignedInt(1): CBOR(Direct().identifier!)]),
+            CBOR.byteString(Data([0x01]))
+        ]
+        #expect(throws: CoseError.self) {
+            _ = try DirectEncryption.fromCoseObject(coseObj: withCiphertext)
+        }
+    }
+    
+    @Test func testOverloadReturnsTheRecipientClass() async throws {
+        let keyWrap = try KeyWrap.fromCoseObject(coseObj: Self.emptyCiphertext)
+        #expect(type(of: keyWrap) == KeyWrap.self)
+        
+        // Dispatch through a base metatype reaches the same implementation.
+        let recipientType: CoseRecipient.Type = KeyWrap.self
+        #expect(try recipientType.fromCoseObject(coseObj: Self.emptyCiphertext) is KeyWrap)
+        let messageType: CoseMessage.Type = KeyWrap.self
+        #expect(try messageType.fromCoseObject(coseObj: Self.emptyCiphertext) is KeyWrap)
+    }
+}
