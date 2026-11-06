@@ -43,25 +43,24 @@ public class CoseSignMessage: CoseMessage {
     ///   - coseObj: The CBOR object to decode.
     /// - Returns: The decoded SignMessage.
     public override class func fromCoseObject(coseObj: [CBOR]) throws -> CoseSignMessage {
-        var coseObj = coseObj
-        let signers = coseObj.popLast()
-        let coseMessage = try super.fromCoseObject(
-            coseObj: coseObj
-        )
-        
-        let msg =  CoseSignMessage(
-            phdr: coseMessage.phdr,
-            uhdr: coseMessage.uhdr,
-            payload: coseMessage.payload!
-        )
-        
-        guard signers != nil  else {
+        guard coseObj.count == 4, let signersArray = coseObj[3].arrayValue else {
             throw CoseError.invalidMessage("Missing or invalid signers.")
         }
+        let coseMessage = try super.fromCoseObject(
+            coseObj: Array(coseObj.prefix(3))
+        )
+        
+        // SignMessage is the concrete COSE_Sign type; it supplies the
+        // "Signature" context the signers need to verify.
+        let msg = SignMessage(
+            uhdr: coseMessage.uhdr,
+            payload: coseMessage.payload
+        )
+        msg.copyProtectedHeader(from: coseMessage)
         
         // Attempt to decode signers
         do {
-            if let signersArray = signers?.arrayValue {
+            if !signersArray.isEmpty {
                 for signer in signersArray {
                     guard let signer = signer.arrayValue else {
                         throw CoseError.valueError("Invalid signer")
@@ -122,7 +121,7 @@ public class CoseSignMessage: CoseMessage {
     // MARK: - Description
     public override var description: String {
         let (phdr, uhdr) = hdrRepr()
-        let payloadDescription = truncate((payload?.base64EncodedString())!)
+        let payloadDescription = truncate(payload?.base64EncodedString() ?? "nil")
         let signersDescription = signers.map { $0.description }.joined(separator: ", ")
         return "<COSE_Sign: [\(phdr), \(uhdr), \(payloadDescription), [\(signersDescription)]]>"
     }

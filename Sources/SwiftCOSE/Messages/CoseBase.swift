@@ -162,9 +162,6 @@ public class CoseBase {
         
         self._phdrEncoded = phdrEncoded
 
-        if let p = payload, !p.isEmpty {
-            throw CoseError.valueError("Payload cannot be empty")
-        }
         self.payload = payload
     }
 
@@ -176,20 +173,31 @@ public class CoseBase {
         
         var unprotectedAttributes: OrderedDictionary<CoseHeaderAttribute, Any> = [:]
         
-        let phdrEncoded = coseObj[0]
-        
-        let uhdr = coseObj[1]
-        if case let .map(uhdrCBORMap) = uhdr {
-            let uhdrMap = OrderedDictionary(uniqueKeysWithValues: uhdrCBORMap.map { key, value in
-                (key.unwrapped as! AnyHashable, value.unwrapped!)
-            })
-            unprotectedAttributes = try parseHeader(hdr: uhdrMap)
+        // RFC 9052, section 3: the protected header is always a byte string
+        // that wraps the encoded header map (zero-length when empty).
+        guard let phdrEncoded = coseObj[0].byteStringValue else {
+            throw CoseError.invalidMessage("The protected header must be a byte string")
         }
+        
+        guard case let .map(uhdrCBORMap) = coseObj[1] else {
+            throw CoseError.invalidMessage("The unprotected header must be a map")
+        }
+        let uhdrMap = OrderedDictionary(uniqueKeysWithValues: uhdrCBORMap.map { key, value in
+            (key.unwrapped as! AnyHashable, value.unwrapped!)
+        })
+        unprotectedAttributes = try parseHeader(hdr: uhdrMap)
 
         return try CoseBase(
             uhdr: unprotectedAttributes,
-            phdrEncoded: phdrEncoded.byteStringValue
+            phdrEncoded: phdrEncoded
         )
+    }
+    
+    /// Copies the protected header of another object, keeping the exact
+    /// bytes it was received with so signatures and MACs verify over them.
+    func copyProtectedHeader(from other: CoseBase) {
+        _phdr = other._phdr
+        _phdrEncoded = other._phdrEncoded
     }
     
     /// Fetches a header attribute from the COSE header buckets.

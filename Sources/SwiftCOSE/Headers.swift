@@ -324,9 +324,14 @@ public func critIsArray(_ value: Any) throws -> Any {
     return value
 }
 
+private func exactInt<T: BinaryInteger>(_ value: T) -> Int? {
+    Int(exactly: value)
+}
+
 public func contentTypeIsUIntOrTstr(_ value: Any) throws -> Any {
-    if let intVal = value as? Int, intVal >= 0 {
-        return value
+    // Decoded CBOR unsigned integers arrive as UInt64; normalise to Int.
+    if let intVal = value as? any BinaryInteger, let normalized = exactInt(intVal), normalized >= 0 {
+        return normalized
     } else if value is String {
         return value
     }

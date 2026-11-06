@@ -31,20 +31,22 @@ public class Mac0Message: MacCommon {
     ///   - coseObj: The COSE object represented as a CBOR array.
     /// - Returns: A decoded Mac0Message instance.
     public override class func fromCoseObject(coseObj: [CBOR]) throws -> Mac0Message {
-        var coseObj = coseObj
-        let authTag = coseObj.popLast()
+        // COSE_Mac0 = [protected, unprotected, payload, tag]
+        guard coseObj.count == 4, let authTag = coseObj[3].byteStringValue else {
+            throw CoseError.invalidMessage("Missing or invalid authentication tag.")
+        }
         let coseMessage = try super.fromCoseObject(
-            coseObj: coseObj
+            coseObj: Array(coseObj.prefix(3))
         )
         
         let msg =  Mac0Message(
-            phdr: coseMessage.phdr,
             uhdr: coseMessage.uhdr,
-            payload: coseMessage.payload!,
             externalAAD: coseMessage.externalAAD,
             key: coseMessage.key as? CoseSymmetricKey
         )
-        msg.authTag = authTag!.byteStringValue!
+        msg.copyProtectedHeader(from: coseMessage)
+        msg.payload = coseMessage.payload
+        msg.authTag = authTag
         
         return msg
     }
@@ -80,7 +82,7 @@ public class Mac0Message: MacCommon {
 
     public override var description: String {
         let (phdr, uhdr) = hdrRepr()
-        let payloadDescription = truncate((payload?.base64EncodedString())!)
+        let payloadDescription = truncate(payload?.base64EncodedString() ?? "nil")
         let authTagDescription = truncate((authTag.base64EncodedString()))
 
         return "<Mac0Message: [phdr: \(phdr), uhdr: \(uhdr), payload: \(String(describing: payloadDescription)), authTag: \(authTagDescription)]>"

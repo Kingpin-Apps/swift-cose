@@ -16,25 +16,46 @@ public class CoseRecipient: CoseMessage {
             return _recipients
         }
         set {
-            for recipient in newValue {
-                _recipients.append(recipient)
-            }
+            _recipients = newValue
         }
     }
     private var _recipients: [CoseRecipient] = []
     
     // MARK: - Abstract Methods
     public class func fromCoseObject(coseObj: [CBOR], context: String? = nil) throws -> CoseRecipient {
-        let baseMsg = try super.fromCoseObject(coseObj: coseObj)
-        baseMsg.payload = coseObj.last?.byteStringValue
-        return CoseRecipient(
-            phdr: baseMsg.phdr,
+        // COSE_recipient = [protected, unprotected, ciphertext, ? recipients]
+        guard coseObj.count == 3 || coseObj.count == 4 else {
+            throw CoseError.invalidMessage("A COSE recipient must have three or four elements.")
+        }
+        let baseMsg = try super.fromCoseObject(coseObj: Array(coseObj.prefix(3)))
+        
+        var nested: [CoseRecipient] = []
+        if coseObj.count == 4 {
+            guard let recipientArray = coseObj[3].arrayValue else {
+                throw CoseError.invalidMessage("Nested recipients must be an array.")
+            }
+            for recipient in recipientArray {
+                guard let recipient = recipient.arrayValue, recipient.count >= 3 else {
+                    throw CoseError.valueError("Invalid recipient")
+                }
+                nested.append(
+                    try createRecipient(recipient: recipient, context: "Rec_Recipient")
+                )
+            }
+        }
+        
+        let msg = CoseRecipient(
             uhdr: baseMsg.uhdr,
-            payload: baseMsg.payload!,
+            payload: baseMsg.payload ?? Data(),
             externalAAD: baseMsg.externalAAD,
             key: baseMsg.key,
-            recipients: []
+            recipients: nested
         )
+        msg.copyProtectedHeader(from: baseMsg)
+        if let context {
+            msg.context = context
+        }
+        return msg
     }
     
     /// Abstract method to compute CEK
@@ -122,8 +143,10 @@ public class CoseRecipient: CoseMessage {
             if let alg = pHdr[Algorithm()] {
                 pAlg = try CoseAlgorithm.fromId(for: alg)
             } else  {
-                throw CoseError.invalidAlgorithm("Algorithm not found in protected headers")
+                pAlg = nil
             }
+        } else if protectedHeader.byteStringValue == nil {
+            throw CoseError.invalidMessage("The protected header must be a byte string")
         } else {
             pAlg = nil
         }
@@ -140,33 +163,32 @@ public class CoseRecipient: CoseMessage {
             })
             unprotectedAttributes = try parseHeader(hdr: ordered)
         } else {
-            throw CoseError.valueError("Protected header must be a CBOR map")
+            throw CoseError.valueError("Unprotected header must be a CBOR map")
         }
         
         // Extract the algorithm from unprotected attributes
-        let alg = unprotectedAttributes[Algorithm()]
-        uAlg = try CoseAlgorithm.fromId(for: alg as Any)
+        if let alg = unprotectedAttributes[Algorithm()] {
+            uAlg = try CoseAlgorithm.fromId(for: alg)
+        } else {
+            uAlg = nil
+        }
 
         // Determine the appropriate recipient class based on the algorithms
-        if pAlg != nil {
-            let coseRecipientClass = fromAlgorithm(algorithm: pAlg!)
-            let coseRecipient = recipient
-            return try coseRecipientClass!
-                .fromCoseObject(
-                    coseObj: coseRecipient,
-                    context: context
-                ) as! T
-        } else if uAlg != nil {
-            let coseRecipientClass = fromAlgorithm(algorithm: uAlg!)
-            let coseRecipient = recipient
-            return try coseRecipientClass!
-                .fromCoseObject(
-                    coseObj: coseRecipient,
-                    context: context
-                ) as! T
-        } else {
+        guard let algorithm = pAlg ?? uAlg else {
             throw CoseError.invalidMessage("No algorithm specified in recipient structure.")
         }
+        guard let coseRecipientClass = fromAlgorithm(algorithm: algorithm) else {
+            throw CoseError.unsupportedRecipient(
+                "No recipient class for algorithm \(String(describing: algorithm.fullname))."
+            )
+        }
+        guard let result = try coseRecipientClass.fromCoseObject(
+            coseObj: recipient,
+            context: context
+        ) as? T else {
+            throw CoseError.invalidMessage("Decoded recipient is not a \(T.self).")
+        }
+        return result
     }
     
     public static func verifyRecipients(_ recipients: [CoseRecipient]) throws -> Set<AnyHashable> {

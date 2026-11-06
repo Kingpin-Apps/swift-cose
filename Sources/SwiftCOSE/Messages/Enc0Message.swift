@@ -32,17 +32,22 @@ public class Enc0Message: EncCommon {
     /// - Parameter coseObj: The array to decode.
     /// - Returns: The decoded Enc0Message.
     public override class func fromCoseObject(coseObj: [CBOR]) throws -> Enc0Message {
+        // COSE_Encrypt0 = [protected, unprotected, ciphertext]
+        guard coseObj.count == 3 else {
+            throw CoseError.invalidMessage("COSE_Encrypt0 must have three elements.")
+        }
         let coseObject = try super.fromCoseObject(
             coseObj: coseObj
         )
         
-        return Enc0Message(
-            phdr: coseObject.phdr,
+        let msg = Enc0Message(
             uhdr: coseObject.uhdr,
-            payload: coseObject.payload ?? Data(),
             externalAAD: coseObject.externalAAD,
             key: coseObject.key as? CoseSymmetricKey
         )
+        msg.copyProtectedHeader(from: coseObject)
+        msg.payload = coseObject.payload
+        return msg
     }
 
     // MARK: - Encoding
@@ -78,6 +83,6 @@ public class Enc0Message: EncCommon {
     public override var description: String {
         let (phdr, uhdr) = hdrRepr()
 
-        return "<COSE_Encrypt0: [\(phdr), \(uhdr), \(truncate((self.payload?.base64EncodedString())!))]>"
+        return "<COSE_Encrypt0: [\(phdr), \(uhdr), \(truncate(self.payload?.base64EncodedString() ?? "nil"))]>"
     }
 }

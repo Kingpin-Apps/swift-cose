@@ -30,15 +30,20 @@ public class CoseSignature: SignCommon {
     // MARK: - Methods
     /// Parses COSE_Signature objects
     public override class func fromCoseObject(coseObj: [CBOR]) throws -> CoseSignature {
+        // COSE_Signature = [protected, unprotected, signature]
+        guard coseObj.count == 3, let signature = coseObj[2].byteStringValue else {
+            throw CoseError.invalidMessage("Missing or invalid signature.")
+        }
         let coseMsg = try super.fromCoseObject(coseObj: coseObj)
         
-        return CoseSignature(
-            phdr: coseMsg.phdr,
+        let signer = CoseSignature(
             uhdr: coseMsg.uhdr,
-            payload: coseMsg.payload!,
             externalAAD: coseMsg.externalAAD,
             key: coseMsg.key
         )
+        signer.copyProtectedHeader(from: coseMsg)
+        signer.signature = signature
+        return signer
     }
     
     /// Creates the signature structure.
@@ -91,8 +96,8 @@ public class CoseSignature: SignCommon {
     // MARK: - Description
     public override var description: String {
         let (phdr, uhdr) = hdrRepr()
-        let payloadDescription = truncate((payload?.base64EncodedString())!)
+        let signatureDescription = truncate(signature?.base64EncodedString() ?? "")
         
-        return "<COSE_Signature: [phdr: \(phdr), uhdr: \(uhdr), payload: \(String(describing: payloadDescription))]>"
+        return "<COSE_Signature: [phdr: \(phdr), uhdr: \(uhdr), signature: \(signatureDescription)]>"
     }
 }

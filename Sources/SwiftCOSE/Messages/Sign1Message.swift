@@ -39,25 +39,21 @@ public class Sign1Message: SignCommon {
 
     /// Decodes a COSE Sign1Message from a CBOR object.
     public override class func fromCoseObject(coseObj: [CBOR]) throws -> Sign1Message {
-        var coseObj = coseObj
-        let signature = coseObj.popLast()
+        guard coseObj.count == 4, let signature = coseObj[3].byteStringValue else {
+            throw CoseError.invalidMessage("Missing or invalid signature.")
+        }
         let coseMessage = try super.fromCoseObject(
-            coseObj: coseObj
+            coseObj: Array(coseObj.prefix(3))
         )
         
         let msg = Sign1Message(
-            phdr: coseMessage.phdr,
             uhdr: coseMessage.uhdr,
-            payload: coseMessage.payload!,
             externalAAD: coseMessage.externalAAD,
             key: coseMessage.key
         )
-
-        guard signature != nil else {
-            throw CoseError.invalidMessage("Missing or invalid signature.")
-        }
-
-        msg.signature = signature!.byteStringValue!
+        msg.copyProtectedHeader(from: coseMessage)
+        msg.payload = coseMessage.payload
+        msg.signature = signature
 
         return msg
     }
@@ -129,7 +125,7 @@ public class Sign1Message: SignCommon {
 
     public override var description: String {
         let (phdr, uhdr) = hdrRepr()
-        let payloadDescription = truncate((payload?.base64EncodedString())!)
+        let payloadDescription = truncate(payload?.base64EncodedString() ?? "nil")
         let signatureDescription = truncate((signature.base64EncodedString()))
         return "<COSE_Sign1: [\(phdr), \(uhdr), \(payloadDescription), \(signatureDescription)]>"
     }

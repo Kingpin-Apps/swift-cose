@@ -14,18 +14,19 @@ public class KeyWrap: CoseRecipient {
     // MARK: - Methods
     public override class func fromCoseObject(coseObj: [CBOR], context: String? = nil) throws -> KeyWrap {
         
-        let msg = try CoseRecipient.fromCoseObject(
-            coseObj: coseObj
-        ) as CoseRecipient
+        let msg = try super.fromCoseObject(
+            coseObj: coseObj,
+            context: context
+        )
             
         let keyWrapMsg = KeyWrap(
-            phdr: msg.phdr,
             uhdr: msg.uhdr,
             payload: msg.payload ?? Data(),
             externalAAD: msg.externalAAD,
             key: msg.key as? CoseSymmetricKey ?? nil,
             recipients: msg.recipients
         )
+        keyWrapMsg.copyProtectedHeader(from: msg)
         
         
         // Set context if provided
@@ -243,7 +244,7 @@ public class KeyWrap: CoseRecipient {
     // MARK: - Debug Description
     public override var description: String {
         let (phdr, uhdr) = hdrRepr()
-        let payloadDescription = truncate((payload?.base64EncodedString())!)
+        let payloadDescription = truncate(payload?.base64EncodedString() ?? "nil")
         let recipientsDescription = recipients.map { $0.description }.joined(separator: ", ")
         
         return "<COSE_Recipient: [\(phdr), \(uhdr), \(payloadDescription), \(recipientsDescription)]>"

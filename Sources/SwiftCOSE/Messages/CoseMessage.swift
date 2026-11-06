@@ -158,13 +158,30 @@ public class CoseMessage: CoseBase, CustomStringConvertible {
     /// - Parameter coseObj: The CBOR object to decode.
     /// - Returns: The decoded COSE message.
     public override class func fromCoseObject(coseObj: [CBOR]) throws -> CoseMessage {
+        // Every COSE structure starts [protected, unprotected, payload/ciphertext, ...].
+        guard coseObj.count >= 3 else {
+            throw CoseError.invalidMessage("A COSE structure needs at least three elements")
+        }
         let baseMsg = try super.fromCoseObject(coseObj: coseObj)
-        baseMsg.payload = coseObj.last?.byteStringValue
-        return CoseMessage(
-            phdr: baseMsg.phdr,
+        let msg = CoseMessage(
             uhdr: baseMsg.uhdr,
-            payload: baseMsg.payload
+            payload: try payloadValue(coseObj[2])
         )
+        msg.copyProtectedHeader(from: baseMsg)
+        return msg
+    }
+    
+    /// Reads a payload or ciphertext slot: a byte string, or `nil` when the
+    /// content is detached.
+    class func payloadValue(_ item: CBOR) throws -> Data? {
+        switch item {
+            case .byteString(let data):
+                return data
+            case .null:
+                return nil
+            default:
+                throw CoseError.invalidMessage("The payload must be a byte string or nil")
+        }
     }
     
     /// Decode received COSE message based on the CBOR tag.
@@ -181,24 +198,37 @@ public class CoseMessage: CoseBase, CustomStringConvertible {
         let cborMsg = try CBORSerialization.cbor(from: received)
         
         let cborObj: CBOR
-        if case let .tagged(_, cborData) = cborMsg {
+        let messageClass: CoseMessage.Type
+        if case let .tagged(tag, cborData) = cborMsg {
+            guard let messageId = CoseMessageIdentifier(rawValue: Int(tag)) else {
+                throw CoseError.invalidMessage("Unknown COSE message tag \(tag).")
+            }
+            messageClass = getInstance(for: messageId)
             cborObj = cborData
         } else {
             throw CoseError.invalidMessage("Message is not tagged.")
         }
         
-        if let messageType = cborObj.arrayValue {
-            do {
-                let decoded = try T.fromCoseObject(
-                    coseObj: messageType
-                )
-                return decoded as! T
-            } catch {
-                throw CoseError.invalidMessage("Unable to decode message.")
-            }
-        } else {
+        // The CBOR tag picks the message class. Decoding through a specific
+        // subclass only accepts messages of that type.
+        guard messageClass is T.Type else {
+            throw CoseError.invalidMessage("Message tag does not match \(T.self).")
+        }
+        
+        guard let messageType = cborObj.arrayValue else {
             throw CoseError.invalidMessage("Invalid message structure.")
         }
+        
+        let decoded: CoseMessage
+        do {
+            decoded = try messageClass.fromCoseObject(coseObj: messageType)
+        } catch {
+            throw CoseError.invalidMessage("Unable to decode message: \(error)")
+        }
+        guard let result = decoded as? T else {
+            throw CoseError.invalidMessage("Decoded message is not a \(T.self).")
+        }
+        return result
     }
 
     public func encode(message: [CBOR], tag: Bool = true) throws -> Data {

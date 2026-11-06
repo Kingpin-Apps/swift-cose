@@ -26,52 +26,44 @@ public class MacMessage: MacCommon {
     
     // MARK: - Methods
     public override class func fromCoseObject(coseObj: [CBOR]) throws -> MacMessage {
-        var coseObj = coseObj
-        let recipients = coseObj.popLast()
-        let authTag = coseObj.popLast()
+        // COSE_Mac = [protected, unprotected, payload, tag, recipients]
+        guard coseObj.count == 5 else {
+            throw CoseError.invalidMessage("COSE_Mac must have five elements.")
+        }
+        guard let authTag = coseObj[3].byteStringValue else {
+            throw CoseError.valueError("Missing authentication tag in COSE object.")
+        }
+        guard let recipientArray = coseObj[4].arrayValue else {
+            throw CoseError.invalidMessage("COSE_Mac must carry an array of recipients.")
+        }
         let coseMessage = try super.fromCoseObject(
-            coseObj: coseObj
+            coseObj: Array(coseObj.prefix(3))
         )
         
         let msg =  MacMessage(
-            phdr: coseMessage.phdr,
             uhdr: coseMessage.uhdr,
-            payload: coseMessage.payload!,
             externalAAD: coseMessage.externalAAD,
             key: coseMessage.key as? CoseSymmetricKey
         )
-        
-        // Extract and assign the authentication tag
-        if authTag?.byteStringValue != nil {
-            msg.authTag = authTag!.byteStringValue!
-        } else {
-            throw CoseError.valueError("Missing authentication tag in COSE object.")
-        }
+        msg.copyProtectedHeader(from: coseMessage)
+        msg.payload = coseMessage.payload
+        msg.authTag = authTag
 
         // Attempt to decode recipients
         do {
-            if let recipientArray = recipients?.arrayValue {
-                for recipient in recipientArray {
-                    guard let recipient = recipient.arrayValue else {
-                        throw CoseError.valueError("Invalid recipient")
-                    }
-                    guard recipient.count == 3 else {
-                        throw CoseError.valueError("Invalid recipient")
-                    }
-                    try msg.recipients
-                        .append(
-                            CoseRecipient
-                                .createRecipient(
-                                    recipient: recipient,
-                                    context: "Mac_Recipient"
-                                )
-                        )
+            for recipient in recipientArray {
+                guard let recipient = recipient.arrayValue, recipient.count >= 3 else {
+                    throw CoseError.valueError("Invalid recipient")
                 }
-            } else {
-                msg.recipients = [] // No recipients present
+                msg.recipients.append(
+                    try CoseRecipient.createRecipient(
+                        recipient: recipient,
+                        context: "Mac_Recipient"
+                    )
+                )
             }
         } catch {
-            throw CoseError.valueError("Failed to decode recipients.")
+            throw CoseError.valueError("Failed to decode recipients: \(error)")
         }
 
         return msg
@@ -169,7 +161,7 @@ public class MacMessage: MacCommon {
     
     public override var description: String {
         let (phdr, uhdr) = hdrRepr()
-        let payloadDescription = truncate((payload?.base64EncodedString())!)
+        let payloadDescription = truncate(payload?.base64EncodedString() ?? "nil")
         let authTagDescription = truncate((authTag.base64EncodedString()))
         let recipientsDescription = recipients.map { $0.description }.joined(separator: ", ")
         return "<COSE_Mac: [\(phdr), \(uhdr), \(payloadDescription), \(authTagDescription), [\(recipientsDescription)]]>"

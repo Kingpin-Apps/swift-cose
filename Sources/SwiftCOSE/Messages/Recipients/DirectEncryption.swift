@@ -32,16 +32,18 @@ public class DirectEncryption: CoseRecipient {
     public override class func fromCoseObject(coseObj: [CBOR], context: String? = nil) throws -> DirectEncryption {
         
         let msg = try super.fromCoseObject(
-            coseObj: coseObj
+            coseObj: coseObj,
+            context: context
         )
         
         let directEncryptionMsg = DirectEncryption(
-            phdr: msg.phdr,
             uhdr: msg.uhdr,
             payload: msg.payload ?? Data(),
             externalAAD: msg.externalAAD,
-            key: msg.key as? CoseSymmetricKey ?? nil
+            key: msg.key as? CoseSymmetricKey ?? nil,
+            recipients: msg.recipients
         )
+        directEncryptionMsg.copyProtectedHeader(from: msg)
         
         // Set context if provided
         if let ctx = context {
@@ -125,7 +127,7 @@ public class DirectEncryption: CoseRecipient {
     // Debug description
     public override var description: String {
         let (phdr, uhdr) = hdrRepr()
-        let payloadDescription = truncate((payload?.base64EncodedString())!)
+        let payloadDescription = truncate(payload?.base64EncodedString() ?? "nil")
         let recipientsDescription = recipients.map { $0.description }.joined(separator: ", ")
 
         return "<COSE_Recipient: [\(phdr), \(uhdr), \(payloadDescription), \(recipientsDescription)]>"

@@ -13,9 +13,7 @@ public class EncMessage: EncCommon {
             return _recipients
         }
         set {
-            for recipient in newValue {
-                _recipients.append(recipient)
-            }
+            _recipients = newValue
         }
     }
 
@@ -50,35 +48,34 @@ public class EncMessage: EncCommon {
     /// - Parameter coseObj: The array to decode.
     /// - Returns: The decoded Enc0Message.
     public override class func fromCoseObject(coseObj: [CBOR]) throws -> EncMessage {
-        // Decode base message using the superclass method
-        guard let msg = try super.fromCoseObject(coseObj: coseObj) as? EncMessage else {
-            throw CoseError.invalidMessage("Failed to decode base EncMessage.")
+        // COSE_Encrypt = [protected, unprotected, ciphertext, recipients]
+        guard coseObj.count == 4, let recipientArray = coseObj[3].arrayValue else {
+            throw CoseError.invalidMessage("COSE_Encrypt must carry an array of recipients.")
         }
+        let base = try super.fromCoseObject(coseObj: Array(coseObj.prefix(3)))
+        
+        let msg = EncMessage(
+            uhdr: base.uhdr,
+            externalAAD: base.externalAAD,
+            key: base.key as? CoseSymmetricKey
+        )
+        msg.copyProtectedHeader(from: base)
+        msg.payload = base.payload
         
         do {
-            // Attempt to parse recipients from the first element of coseObj
-            if let recipientArray = coseObj.first?.arrayValue {
-                for recipient in recipientArray {
-                    guard let recipient = recipient.arrayValue else {
-                        throw CoseError.valueError("Invalid recipient")
-                    }
-                    guard recipient.count == 3 else {
-                        throw CoseError.valueError("Invalid recipient")
-                    }
-                    try msg.recipients
-                        .append(
-                            CoseRecipient
-                                .createRecipient(
-                                    recipient: recipient,
-                                    context: "Enc_Recipient"
-                                )
-                        )
+            for recipient in recipientArray {
+                guard let recipient = recipient.arrayValue, recipient.count >= 3 else {
+                    throw CoseError.valueError("Invalid recipient")
                 }
-            } else {
-                msg.recipients = [] // If no recipients found, assign an empty array
+                msg.recipients.append(
+                    try CoseRecipient.createRecipient(
+                        recipient: recipient,
+                        context: "Enc_Recipient"
+                    )
+                )
             }
         } catch {
-            throw CoseError.valueError("Failed to decode recipients.")
+            throw CoseError.valueError("Failed to decode recipients: \(error)")
         }
         
         return msg
@@ -197,6 +194,6 @@ public class EncMessage: EncCommon {
     public override var description: String {
         let (phdr, uhdr) = hdrRepr()
         let recipientsDesc = recipients.map { $0.description }.joined(separator: ", ")
-        return "<COSE_Recipient: [\(phdr), \(uhdr), \(truncate((self.payload?.base64EncodedString())!)), \(recipientsDesc)]"
+        return "<COSE_Recipient: [\(phdr), \(uhdr), \(truncate(self.payload?.base64EncodedString() ?? "nil")), \(recipientsDesc)]"
     }
 }

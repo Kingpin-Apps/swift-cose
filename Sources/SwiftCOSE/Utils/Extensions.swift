@@ -184,6 +184,14 @@ extension CBOR {
             return .textString(stringValue)
         } else if let intValue = value as? Int {
             return CBOR(intValue)
+        } else if let uint64Value = value as? UInt64 {
+            // Decoded CBOR unsigned integers come back as UInt64.
+            return .unsignedInt(uint64Value)
+        } else if let int64Value = value as? Int64 {
+            // Decoded CBOR negative integers come back as Int64.
+            return int64Value >= 0
+                ? .unsignedInt(UInt64(int64Value))
+                : .negativeInt(UInt64(-1 - int64Value))
         } else if let simpleValue = value as? UInt8 {
             return .simple(simpleValue)
         } else if let simpleValue = value as? Int8 {
