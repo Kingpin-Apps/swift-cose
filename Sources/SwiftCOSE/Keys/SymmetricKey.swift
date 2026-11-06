@@ -13,12 +13,16 @@ public class CoseSymmetricKey: CoseKey {
             return key
         }
         set {
-            guard newValue.count == 16 || newValue.count == 24 || newValue.count == 32 else {
-                fatalError("Key length should be either 16, 24, or 32 bytes")
+            guard CoseSymmetricKey.validKeyLengths.contains(newValue.count) else {
+                fatalError("Key length should be 16, 24, 32, 48 or 64 bytes")
             }
             store[SymKpK()] = newValue
         }
     }
+
+    /// Key sizes for AES (16, 24, 32 bytes) and HMAC with SHA-256, SHA-384
+    /// and SHA-512 (32, 48, 64 bytes).
+    static let validKeyLengths: Set<Int> = [16, 24, 32, 48, 64]
 
     // Supported key operations
     private var _keyOps: [KeyOps] = []
@@ -78,6 +82,12 @@ public class CoseSymmetricKey: CoseKey {
         
         self.optionalParams = optionalParams
         
+        // Check here so a bad length (for example an unwrapped key from a
+        // received message) throws instead of reaching the trapping setter.
+        guard CoseSymmetricKey.validKeyLengths.contains(k.count) else {
+            throw CoseError.invalidKey("Key length should be 16, 24, 32, 48 or 64 bytes")
+        }
+        
         super.init(keyDict: transformedDict)
         
         self.k = k
@@ -106,13 +116,13 @@ public class CoseSymmetricKey: CoseKey {
     
     /// Generate a random Symmetric COSE key object.
     /// - Parameters:
-    ///   - keyLength: Symmetric key length in bytes, must be of size 16, 24 or 32.
+    ///   - keyLength: Symmetric key length in bytes: 16, 24, 32, 48 or 64.
     ///   - optionalParams: Optional key attributes for the `SymmetricKey` object, e.g., `KpAlg` or  `KpKid`.
     /// - Returns: A COSE_key of type SymmetricKey.
     /// - Throws: `CoseError` if key length is invalid.
     public static func generateKey(keyLength: Int, optionalParams: [AnyHashable: Any]? = nil) throws -> CoseSymmetricKey {
-        guard keyLength == 16 || keyLength == 24 || keyLength == 32 else {
-            throw CoseError.invalidKey("Key length must be 16, 24, or 32 bytes")
+        guard validKeyLengths.contains(keyLength) else {
+            throw CoseError.invalidKey("Key length must be 16, 24, 32, 48 or 64 bytes")
         }
         let keyData = Data.randomBytes(count: keyLength)
         return try CoseSymmetricKey(

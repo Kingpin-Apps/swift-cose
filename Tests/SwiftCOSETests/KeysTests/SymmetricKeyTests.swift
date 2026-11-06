@@ -70,4 +70,22 @@ struct CoseSymmetricKeyTests {
         #expect(description.contains("COSE_Key"))
         #expect(description.contains("Symmetric"))
     }
+    
+    @Test func testHmacKeyLengths() async throws {
+        // HMAC with SHA-384 and SHA-512 uses 48- and 64-byte keys.
+        for length in [48, 64] {
+            let key = try CoseSymmetricKey(k: Data.randomBytes(count: length))
+            #expect(key.k.count == length)
+        }
+    }
+    
+    @Test func testInitRejectsBadKeyLengthWithoutTrapping() async throws {
+        // An unwrapped key from a received message can have any length.
+        #expect(throws: CoseError.self) {
+            _ = try CoseSymmetricKey(k: Data(count: 20))
+        }
+        #expect(throws: CoseError.self) {
+            _ = try CoseSymmetricKey(k: Data())
+        }
+    }
 }
