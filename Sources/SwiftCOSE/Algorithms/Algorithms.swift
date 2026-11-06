@@ -71,8 +71,8 @@ public enum CoseAlgorithmIdentifier: Int, CaseIterable, Sendable {
         }
     }
     
-    /// Returns the appropriate `CoseAlgorithmIdentifier` for the given fullname.
-    /// - Parameter fullname: The string fullname of the algorithm.
+    /// Returns the appropriate `CoseAlgorithmIdentifier` for the given full name.
+    /// - Parameter fullName: The string fullname of the algorithm.
     /// - Returns: The corresponding `CoseAlgorithmIdentifier` if found, otherwise nil.
     public static func fromFullName(_ fullName: String) -> CoseAlgorithmIdentifier? {
         switch fullName {

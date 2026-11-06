@@ -41,7 +41,6 @@ public class CoseSignMessage: CoseMessage {
     /// Decodes a COSE_Sign message from a CBOR object.
     /// - Parameters:
     ///   - coseObj: The CBOR object to decode.
-    ///   - allowUnknownAttributes: Whether to allow unknown attributes.
     /// - Returns: The decoded SignMessage.
     public override class func fromCoseObject(coseObj: [CBOR]) throws -> CoseSignMessage {
         var coseObj = coseObj

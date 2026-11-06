@@ -12,7 +12,7 @@ public class Enc0Message: EncCommon {
     ///   - phdr: Protected header bucket.
     ///   - uhdr: Unprotected header bucket.
     ///   - payload: The payload (will be encrypted and authenticated).
-    ///   - externalAad: External data (is authenticated but not transported in the message).
+    ///   - externalAAD: External data (is authenticated but not transported in the message).
     ///   - key: The Symmetric COSE key for encryption/decryption of the message
     /// - Returns: A COSE Encrypt0 message object.
     public override init(phdr: OrderedDictionary<CoseHeaderAttribute, Any>? = nil,

@@ -2,7 +2,7 @@
 
 # SwiftCOSE - CBOR Object Signing and Encryption
 
-This project is a Swift implementation of the IETF CBOR Encoded Message Syntax (COSE). COSE has reached RFC status and is now available at RFC 8152.
+This project is a Swift implementation of the IETF CBOR Object Signing and Encryption (COSE) format. COSE was published as RFC 8152, which has since been replaced by RFC 9052 and RFC 9053.
 
 ## Platform support
 
@@ -16,13 +16,15 @@ This project is a Swift implementation of the IETF CBOR Encoded Message Syntax (
 WASM is blocked by `apple/swift-crypto`'s `_CryptoExtras` module (pulled in transitively via `swift-certificates`/`X509`): `Sources/_CryptoExtras/Util/ThreadSpecific/ThreadSpecific.swift` references a `ThreadOpsSystem` typealias that has no WASI implementation. Upstream itself is not green for WASM — see the [swift-crypto build matrix](https://swiftpackageindex.com/apple/swift-crypto/builds). We'll revisit when upstream lands WASI support.
 
 ## Usage
-To add SwiftCOSE as dependency to your Xcode project, select `File` > `Swift Packages` > `Add Package Dependency`, enter its repository URL: `https://github.com/Kingpin-Apps/swift-cose.git` and import `SwiftCOSE`.
+To add SwiftCOSE as a dependency to your Xcode project, select `File` > `Add Package Dependencies…`, enter its repository URL, `https://github.com/Kingpin-Apps/swift-cose.git`, and add `SwiftCOSE` to your target.
 
-    ```swift
-    dependencies: [
-        .package(url: "https://github.com/Kingpin-Apps/swift-cose.git", from: "0.0.1")
-    ]
-    ```
+In a `Package.swift` file, add:
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/Kingpin-Apps/swift-cose.git", from: "1.3.3")
+]
+```
 
 Then, to use it in your source code, add:
 
@@ -31,7 +33,7 @@ import SwiftCOSE
 ```
 
 ## What is COSE ?
-CBOR Encoded Message Syntax (COSE) is a data format for concise representation of small messages [RFC 8152](https://tools.ietf.org/html/rfc8152). COSE is optimized for low power devices. The messages can be encrypted, MAC'ed and signed. There are 6 different types of COSE messages:
+CBOR Object Signing and Encryption (COSE) is a data format for concise representation of small messages [RFC 8152](https://tools.ietf.org/html/rfc8152). COSE is optimized for low power devices. The messages can be encrypted, MAC'ed and signed. There are 6 different types of COSE messages:
 
 - **Encrypt0**: An encrypted COSE message with a single recipient. The payload and AAD are protected by a shared CEK (Content Encryption Keys)
 - **Encrypt**: An encrypted COSE message can have multiple recipients. For each recipient the CEK is encrypted with a KEK (Key Encryption Key) - using AES key wrap - and added to the message.
@@ -53,43 +55,40 @@ Additionally, based on the message type, other message fields can be added:
 
 ## Examples
 
-### Encoding
+Header buckets are `OrderedDictionary` values from [swift-collections](https://github.com/apple/swift-collections), so import `OrderedCollections` as well.
+
+### Signing (COSE_Sign1)
 ```swift
+import Foundation
+import OrderedCollections
 import SwiftCOSE
 
-// Create a COSE Encrypt0 Message
-let msg = Enc0Message(
-    phdr: [
-        Algorithm(): A128GCM(),
-        IV(): Data([0x01, 0x02, 0x03, 0x04])
-    ],
-    uhdr: [
-        KID(): Data("test.guy@example.com".utf8)
-    ],
-    payload: Data("A secret message".utf8)
+// Create an Ed25519 COSE key
+let curve = try CoseCurve.fromId(for: CoseCurveIdentifier.ed25519)
+let key = try OKPKey.generateKey(curve: curve)
+
+let phdr: OrderedDictionary<CoseHeaderAttribute, Any> = [
+    Algorithm(): EdDSAAlgorithm(),
+    KID(): Data("test.guy@example.com".utf8)
+]
+
+let msg = Sign1Message(
+    phdr: phdr,
+    payload: Data("A signed message".utf8),
+    key: key
 )
 
-// Create a COSE Symmetric Key
-let coseKey = SymmetricKey.generateKey(keyLength: 32)
-msg.key = coseKey
-
-// Performs encryption and CBOR serialization
-msg.encode()
+// Signs the payload and serializes the message to CBOR
+let encoded = try msg.encode()
 ```
 
-### Decoding
+### Verifying
 ```swift
-import SwiftCOSE
+// Decode the CBOR-encoded message
+let decoded = try CoseMessage.decode(Sign1Message.self, from: encoded)
 
-// message bytes (CBOR encoded)
-let msg = Data([0xd8, 0x3d, 0x85, 0x01, 0x01, 0xa0, 0x01, 0x02, 0x03, 0x04, 0x58, 0x14, 0x54, 0x65, 0x73, 0x74, 0x20, 0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65])
-
-let coseMsg = Enc0Message.decode(from: msg)
-
-// Create a COSE Symmetric Key
-let coseKey = SymmetricKey.generateKey(keyLength: 32)
-msg.key = coseKey
-
-msg.decrypt()
+// Attach the signer's public key and check the signature
+decoded.key = try OKPKey(curve: curve, x: key.x)
+let isValid = try decoded.verifySignature()
 ```
 

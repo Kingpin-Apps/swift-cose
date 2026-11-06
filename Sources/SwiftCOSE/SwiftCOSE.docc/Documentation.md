@@ -1,55 +1,96 @@
 # ``SwiftCOSE``
 
-A Swift implementation of CBOR Object Signing and Encryption
+A Swift implementation of CBOR Object Signing and Encryption (COSE).
 
-## What is COSE?
+## Overview
 
-CBOR Object Signing and Encryption (COSE) is a data format designed for the concise representation of small messages, optimized for low-power devices. COSE messages can be encrypted, authenticated (MAC'ed), and signed. A basic COSE message structure includes:
+CBOR Object Signing and Encryption (COSE) is a data format for small, concise messages, designed for low-power devices. It is defined in [RFC 8152](https://www.rfc-editor.org/rfc/rfc8152), which has since been replaced by [RFC 9052](https://www.rfc-editor.org/rfc/rfc9052) and [RFC 9053](https://www.rfc-editor.org/rfc/rfc9053). COSE messages can be encrypted, authenticated (MAC'ed), and signed.
 
-- **Protected header**: Contains information that needs protection during encryption, MAC calculation, or signing.
-- **Unprotected header**: Contains information not protected by cryptographic algorithms.
-- **Payload**: The message content, protected by cryptographic algorithms.
+Every COSE message has the same basic structure: a CBOR array that starts with three fields.
 
-![Basic Structure](../images/basic_structure.png)
+- **Protected header**: information that is covered by the encryption, MAC, or signature.
+- **Unprotected header**: information that is not covered by the cryptographic algorithms.
+- **Payload**: the message content, which is protected by the cryptographic algorithms.
 
-### Types of COSE Messages
+Depending on the message type, the array then ends with:
 
-There are six different types of COSE messages:
+- a single *MAC* or *signature* field for **MAC0** and **Sign1** messages, or
+- a list of *COSE recipients* or *COSE signatures* for **MAC**, **Encrypt**, and **Sign** messages.
 
-- **Encrypt0**: An encrypted message with a single recipient, protected by a shared Content Encryption Key (CEK).
-- **Encrypt**: An encrypted message with multiple recipients, each having the CEK encrypted with a Key Encryption Key (KEK) using AES key wrap.
-- **MAC0**: An authenticated message with one recipient.
-- **MAC**: An authenticated message with multiple recipients, each having the authentication key encrypted with a KEK.
-- **Sign1**: A signed message with a single signature.
-- **Sign**: A signed message with multiple signatures, each carried in a COSE signature structure.
+### Message types
 
-Based on the message type, additional fields are appended to the basic COSE structure:
+SwiftCOSE supports all six COSE message types:
 
-- A single *MAC* or *signature* field for **MAC0** or **Sign1** messages.
-- A list of *COSE recipients* or *COSE signatures* for **MAC**, **Encrypt**, and **Sign** messages.
+- **Encrypt0** (``Enc0Message``): an encrypted message for a single recipient. The payload and external data are protected by a shared Content Encryption Key (CEK).
+- **Encrypt** (``EncMessage``): an encrypted message that can have several recipients. Each recipient gets the CEK, protected by that recipient's key, for example with AES key wrap.
+- **MAC0** (``Mac0Message``): an authenticated message for a single recipient.
+- **MAC** (``MacMessage``): an authenticated message that can have several recipients. Each recipient gets the authentication key, protected by that recipient's key.
+- **Sign1** (``Sign1Message``): a signed message with a single signature.
+- **Sign** (``SignMessage``): a message signed by one or more signers. Each signature is carried in its own COSE signature structure (``CoseSignature``).
 
-### COSE Key Objects
+Use ``CoseMessage/decode(_:from:)`` to decode CBOR-encoded bytes into a message of a given type.
 
-The RFC defines COSE Key objects used to store and transport cryptographic keys. The main key types are:
+### Keys
 
-- **EC2**: Elliptic Curve Keys with an x/y-coordinate pair.
-- **OKP**: Octet Key Pair.
-- **Symmetric**: Symmetric Keys for symmetric cryptography.
+COSE Key objects store and transport cryptographic keys. SwiftCOSE supports these key types:
 
-## Table of Contents
+- **EC2** (``EC2Key``): elliptic curve keys with an x/y-coordinate pair.
+- **OKP** (``OKPKey``): octet key pairs, such as Ed25519 and X25519 keys.
+- **RSA** (``RSAKey``): RSA keys.
+- **Symmetric** (``CoseSymmetricKey``): keys for symmetric cryptography.
 
-### The SwiftCOSE Package (API)
+## Topics
 
-- [Messages](pycose/messages/index.rst)
-- [Keys](pycose/keys/index.rst)
-- [Algorithms](pycose/algorithms.rst)
+### Messages
 
-### Miscellaneous
+- ``CoseMessage``
+- ``Sign1Message``
+- ``SignMessage``
+- ``CoseSignature``
+- ``Mac0Message``
+- ``MacMessage``
+- ``Enc0Message``
+- ``EncMessage``
 
-- [Installation](installation.rst)
-- [License](LICENSE.rst)
-- [Contributing](CONTRIBUTING.rst)
-- [Examples](examples.rst)
-- [Glossary](glossary.rst)
+### Recipients
 
-For more details on COSE, refer to the [RFC 8152](https://tools.ietf.org/html/rfc8152).
+- ``CoseRecipient``
+- ``DirectEncryption``
+- ``DirectKeyAgreement``
+- ``KeyWrap``
+- ``KeyAgreementWithKeyWrap``
+- ``CoseKDFContext``
+
+### Headers
+
+- ``CoseHeaderAttribute``
+- ``Algorithm``
+- ``KID``
+- ``IV``
+- ``PartialIV``
+- ``ContentType``
+- ``Critical``
+
+### Keys
+
+- ``CoseKey``
+- ``EC2Key``
+- ``OKPKey``
+- ``RSAKey``
+- ``CoseSymmetricKey``
+- ``CoseCurve``
+- ``KeyOps``
+
+### Algorithms
+
+- ``CoseAlgorithm``
+- ``CoseAlgorithmIdentifier``
+- ``EcdsaAlgorithm``
+- ``EdDSAAlgorithm``
+- ``RsaAlgorithm``
+- ``HmacAlgorithm``
+- ``AesMacAlgorithm``
+- ``AesGcmAlgorithm``
+- ``AesCcmAlgorithm``
+- ``AesKwAlgorithm``
+- ``EcdhHkdfAlgorithm``

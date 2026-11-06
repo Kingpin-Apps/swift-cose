@@ -29,7 +29,6 @@ public class Mac0Message: MacCommon {
     /// Decode a Mac0Message from a COSE object.
     /// - Parameters:
     ///   - coseObj: The COSE object represented as a CBOR array.
-    ///   - allowUnknownAttributes: Flag to allow unknown attributes.
     /// - Returns: A decoded Mac0Message instance.
     public override class func fromCoseObject(coseObj: [CBOR]) throws -> Mac0Message {
         var coseObj = coseObj

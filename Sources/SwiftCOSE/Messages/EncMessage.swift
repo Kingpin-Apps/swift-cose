@@ -27,10 +27,10 @@ public class EncMessage: EncCommon {
     ///   - phdr: Protected header bucket.
     ///   - uhdr: Unprotected header bucket.
     ///   - payload: The payload of the COSE_Encrypt message.
-    ///   - externalAad: External additional data (is authenticated by not included in the final message)
+    ///   - externalAAD: External additional data (is authenticated but not included in the final message)
     ///   - key: The Symmetric COSE key for encryption/decryption of the message
     ///   - recipients: An optional list of `CoseRecipient` objects.
-    /// - Returns: A COSE Encrypt0 message object.
+    /// - Returns: A COSE Encrypt message object.
     public init(phdr: OrderedDictionary<CoseHeaderAttribute, Any>? = nil,
                 uhdr: OrderedDictionary<CoseHeaderAttribute, Any>? = nil,
                  payload: Data = Data(),

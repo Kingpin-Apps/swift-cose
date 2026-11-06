@@ -10,8 +10,8 @@ public enum KeyParamIdentifier: Int, CaseIterable, Sendable {
     case keyOps = 4
     case baseIV = 5
     
-    /// Returns the appropriate `CoseKeyParam` subclass for the given fullname.
-    /// - Parameter fullname: The string fullname of the key parameter.
+    /// Returns the appropriate `CoseKeyParam` subclass for the given full name.
+    /// - Parameter fullName: The string fullname of the key parameter.
     /// - Returns: An instance of the corresponding `CoseKeyParam` subclass if found, otherwise nil.
     public static func fromFullName(_ fullName: String) -> KeyParamIdentifier? {
         switch fullName.uppercased() {

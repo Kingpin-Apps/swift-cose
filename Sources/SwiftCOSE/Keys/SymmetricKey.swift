@@ -103,7 +103,7 @@ public class CoseSymmetricKey: CoseKey {
     
     /// Generate a random Symmetric COSE key object.
     /// - Parameters:
-    ///   - keyLen: Symmetric key length in bytes, must be of size 16, 24 or 32.
+    ///   - keyLength: Symmetric key length in bytes, must be of size 16, 24 or 32.
     ///   - optionalParams: Optional key attributes for the `SymmetricKey` object, e.g., `KpAlg` or  `KpKid`.
     /// - Returns: A COSE_key of type SymmetricKey.
     /// - Throws: `CoseError` if key length is invalid.
