@@ -54,16 +54,14 @@ public class CoseSignature: SignCommon {
             throw CoseError.invalidMessage("Parent message is not set")
         }
         
+        // RFC 9052, section 4.4: a COSE_Sign Sig_structure always carries
+        // both the body and the signer protected headers, even when empty.
         var signStructure: [CBOR] = [
             CBOR.textString(parent.context),
-            CBOR.fromAny(parent.phdrEncoded)
+            CBOR.byteString(parent.phdrEncoded),
+            CBOR.byteString(phdrEncoded),
+            CBOR.byteString(externalAAD)
         ]
-        
-        if !phdrEncoded.isEmpty {
-            signStructure.append(CBOR.fromAny(phdrEncoded))
-        }
-        
-        signStructure.append(CBOR.fromAny(externalAAD))
         
         if detachedPayload == nil {
             guard let parentPayload = parent.payload else {
