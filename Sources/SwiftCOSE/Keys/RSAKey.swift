@@ -1,4 +1,5 @@
 import Foundation
+import _CryptoExtras
 #if canImport(CryptoKit)
 import CryptoKit
 #else
@@ -212,6 +213,28 @@ public class RSAKey: CoseKey {
         return try RSAKey.fromDictionary(coseKey)
     }
     
+    /// The smallest RSA key size swift-crypto accepts for signing and
+    /// encryption with raw key numbers.
+    static let minimumKeyBits = 2048
+    
+    /// The bit length of the modulus `n`, ignoring leading zero bytes.
+    var modulusBitLength: Int? {
+        guard let n else { return nil }
+        guard let first = n.firstIndex(where: { $0 != 0 }) else { return 0 }
+        let significant = n.count - (first - n.startIndex)
+        return (significant - 1) * 8 + (8 - n[first].leadingZeroBitCount)
+    }
+    
+    /// Throws a clear error for a key swift-crypto would reject as too small.
+    func requireSupportedSize() throws {
+        guard let bits = modulusBitLength else {
+            throw CoseError.invalidKey("RSA key has no modulus n")
+        }
+        guard bits >= RSAKey.minimumKeyBits else {
+            throw CoseError.invalidKey("RSA keys must be at least \(RSAKey.minimumKeyBits) bits; this key's modulus is \(bits) bits")
+        }
+    }
+    
     /// Generate a random RSAKey COSE key object. The RSA keys have two primes (see section 4 of RFC 8230).
     /// - Parameters:
     ///  - keyBits: The key length in bits.
@@ -221,24 +244,75 @@ public class RSAKey: CoseKey {
         guard keyBits % 8 == 0 else {
             throw CoseError.invalidKey("Invalid key length")
         }
-
-        let extKey = try CryptoSwift.RSA(keySize: keyBits)
-        guard let primes = extKey.primes else {
-            throw CoseError.invalidKey("RSA key generation did not return primes")
+        guard keyBits >= RSAKey.minimumKeyBits else {
+            throw CoseError.invalidKey("RSA keys must be at least \(RSAKey.minimumKeyBits) bits; \(keyBits) bits requested")
         }
 
-        var additionalParams: [AnyHashable: Any] = [
-            RSAKpP(): toBstr(primes.p),
-            RSAKpQ(): toBstr(primes.q),
+        // Generate with swift-crypto, which guarantees a modulus of exactly
+        // keyBits bits. CryptoSwift's generator multiplies two keyBits/2-bit
+        // primes, so about half its "2048-bit" keys have a 2047-bit modulus,
+        // which swift-crypto (4.5.2 and later) rejects as under 2048 bits.
+        let generated: _RSA.Signing.PrivateKey
+        do {
+            generated = try _RSA.Signing.PrivateKey(keySize: .init(bitCount: keyBits))
+        } catch {
+            throw CoseError.invalidKey("RSA key generation failed: \(error)")
+        }
+        // Read the numbers back out of the PKCS #1 private key.
+        let numbers = try pkcs1PrivateKeyNumbers(generated.derRepresentation)
+        var coseKey: [AnyHashable: Any] = [
+            RSAKpN(): numbers[0],
+            RSAKpE(): numbers[1],
+            RSAKpD(): numbers[2],
+            RSAKpP(): numbers[3],
+            RSAKpQ(): numbers[4],
+            RSAKpDP(): numbers[5],
+            RSAKpDQ(): numbers[6],
+            RSAKpQInv(): numbers[7],
         ]
         for (key, value) in optionalParams {
-            additionalParams[key] = value
+            coseKey[key] = value
         }
-
-        return try RSAKey.fromCryptographyKey(
-            extKey: extKey,
-            optionalParams: additionalParams
-        )
+        return try RSAKey.fromDictionary(coseKey)
+    }
+    
+    /// Reads n, e, d, p, q, dp, dq and qInv from a two-prime PKCS #1
+    /// `RSAPrivateKey` (RFC 8017, appendix A.1.2), as big-endian bytes
+    /// without sign padding.
+    static func pkcs1PrivateKeyNumbers(_ der: Data) throws -> [Data] {
+        let bytes = [UInt8](der)
+        var index = 0
+        
+        func fail() -> CoseError { CoseError.invalidKey("Malformed PKCS #1 RSA private key") }
+        func readLength() throws -> Int {
+            guard index < bytes.count else { throw fail() }
+            let first = bytes[index]; index += 1
+            if first < 0x80 { return Int(first) }
+            let count = Int(first & 0x7F)
+            guard count >= 1, count <= 4, index + count <= bytes.count else { throw fail() }
+            var length = 0
+            for _ in 0..<count { length = (length << 8) | Int(bytes[index]); index += 1 }
+            return length
+        }
+        func readInteger() throws -> Data {
+            guard index < bytes.count, bytes[index] == 0x02 else { throw fail() }
+            index += 1
+            let length = try readLength()
+            guard length > 0, index + length <= bytes.count else { throw fail() }
+            var value = bytes[index..<(index + length)]
+            index += length
+            while value.count > 1, value.first == 0 { value = value.dropFirst() }
+            return Data(value)
+        }
+        
+        guard bytes.first == 0x30 else { throw fail() }
+        index = 1
+        let length = try readLength()
+        guard index + length == bytes.count else { throw fail() }
+        guard try readInteger() == Data([0]) else {
+            throw CoseError.invalidKey("Only two-prime RSA keys are supported")
+        }
+        return try (0..<8).map { _ in try readInteger() }
     }
 
     /// Returns an initialized COSE Key object of type RSAKey.

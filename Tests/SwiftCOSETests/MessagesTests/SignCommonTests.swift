@@ -77,7 +77,7 @@ struct SignCommonTests {
     }
     
     @Test func testKeyVerificationWithRSAKey() async throws {
-        let rsaKey = try RSAKey.generateKey(keyBits: 1024)
+        let rsaKey = try RSAKey.generateKey(keyBits: 2048)
         
         let phdr: OrderedDictionary<CoseHeaderAttribute, Any> = [Algorithm(): Ps256()]
         let signMessage = SignCommon(

@@ -8,7 +8,7 @@ struct RSAKeyTests {
     // MARK: - Test RSA Key Initialization
     
     @Test func testRSAKeyInitialization() async throws {
-        let keyBits = 1024
+        let keyBits = 2048
         let rsaKey = try RSAKey.generateKey(keyBits: keyBits)
         
         #expect(rsaKey.n != nil)
@@ -32,7 +32,7 @@ struct RSAKeyTests {
     // MARK: - Test Key Operations
     
     @Test func testKeyOperations() async throws {
-        let rsaKey = try RSAKey.generateKey(keyBits: 1024)
+        let rsaKey = try RSAKey.generateKey(keyBits: 2048)
         
         let signOp = SignOp()
         let verifyOp = VerifyOp()
@@ -104,7 +104,7 @@ struct RSAKeyTests {
     // MARK: - Test Key Deletion
     
     @Test func testKeyDeletion() async throws {
-        let rsaKey = try RSAKey.generateKey(keyBits: 1024)
+        let rsaKey = try RSAKey.generateKey(keyBits: 2048)
         
         try rsaKey.delete(key: RSAKpD())
         
@@ -116,7 +116,7 @@ struct RSAKeyTests {
     // MARK: - Test Description
     
     @Test func testDescription() async throws {
-        let rsaKey = try RSAKey.generateKey(keyBits: 1024)
+        let rsaKey = try RSAKey.generateKey(keyBits: 2048)
         
         let description = rsaKey.description
         

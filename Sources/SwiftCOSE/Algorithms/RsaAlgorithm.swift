@@ -10,6 +10,24 @@ import BigInt
 import CryptoSwift
 import _CryptoExtras
 
+/// The public numbers of an RSA key, after checking its size.
+private func publicParts(of key: RSAKey) throws -> (n: Data, e: Data) {
+    try key.requireSupportedSize()
+    guard let n = key.n, let e = key.e else {
+        throw CoseError.invalidKey("RSA public key needs n and e")
+    }
+    return (n, e)
+}
+
+/// The private numbers of an RSA key, after checking its size.
+private func privateParts(of key: RSAKey) throws -> (n: Data, e: Data, d: Data, p: Data, q: Data) {
+    let (n, e) = try publicParts(of: key)
+    guard let d = key.d, let p = key.p, let q = key.q else {
+        throw CoseError.invalidKey("RSA private key needs n, e, d, p and q")
+    }
+    return (n, e, d, p, q)
+}
+
 public enum Padding {
     case oaep
     case pkcs1v1_5
@@ -36,14 +54,11 @@ public class RsaAlgorithm: CoseAlgorithm {
     
     public func sign(key: RSAKey, data: Data) throws -> Data {
         // Construct the private key
+        let parts = try privateParts(of: key)
         let privateKey: _RSA.Signing.PrivateKey
         do{
             privateKey =  try _RSA.Signing.PrivateKey(
-                n: key.n!,
-                e: key.e!,
-                d: key.d!,
-                p: key.p!,
-                q: key.q!
+                n: parts.n, e: parts.e, d: parts.d, p: parts.p, q: parts.q
             )
         } catch {
             throw CoseError.valueError("Invalid RSA key: \(error.localizedDescription)")
@@ -78,10 +93,11 @@ public class RsaAlgorithm: CoseAlgorithm {
     }
         
     public func verify(key: RSAKey, data: Data, signature: Data)throws  -> Bool {
+        // A key that is too small is a usage error, not a bad signature.
+        let parts = try publicParts(of: key)
         do {
             // Construct the public key
-            _ = _RSA.Signing.RSASignature(rawRepresentation: signature)
-            let rsaPublicKey = try _RSA.Signing.PublicKey(n: key.n!, e: key.e!)
+            let rsaPublicKey = try _RSA.Signing.PublicKey(n: parts.n, e: parts.e)
             
             // Get hash of data
             let digest: any CKDigest
@@ -134,7 +150,13 @@ public class RsaOaep: RsaAlgorithm {
     }
 
     func keyWrap(key: RSAKey, data: Data) throws -> Data {
-        let rsaPublicKey = try _RSA.Encryption.PublicKey(n: key.n!, e: key.e!)
+        let parts = try publicParts(of: key)
+        let rsaPublicKey: _RSA.Encryption.PublicKey
+        do {
+            rsaPublicKey = try _RSA.Encryption.PublicKey(n: parts.n, e: parts.e)
+        } catch {
+            throw CoseError.invalidKey("Invalid RSA key: \(error)")
+        }
         
         switch padding {
             case .oaep:
@@ -150,14 +172,11 @@ public class RsaOaep: RsaAlgorithm {
 
     func keyUnwrap(key: RSAKey, data: Data) throws -> Data {
         // Construct the private key
+        let parts = try privateParts(of: key)
         let privateKey: _RSA.Encryption.PrivateKey
         do{
             privateKey =  try _RSA.Encryption.PrivateKey(
-                n: key.n!,
-                e: key.e!,
-                d: key.d!,
-                p: key.p!,
-                q: key.q!
+                n: parts.n, e: parts.e, d: parts.d, p: parts.p, q: parts.q
             )
         } catch {
             throw CoseError.valueError("Invalid RSA key: \(error.localizedDescription)")
