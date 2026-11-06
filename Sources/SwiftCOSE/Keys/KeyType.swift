@@ -9,9 +9,15 @@ public enum KeyTypeIdentifier: Int, CaseIterable, Sendable {
     
     public static func fromKTY(_ kty: KTY) throws -> KeyTypeIdentifier {
         if let fullname = kty.fullname {
-            return KeyTypeIdentifier.fromFullName(fullname)!
+            guard let id = KeyTypeIdentifier.fromFullName(fullname) else {
+                throw CoseError.invalidAlgorithm("Unknown fullname \(fullname)")
+            }
+            return id
         } else if let identifier = kty.identifier {
-            return KeyTypeIdentifier(rawValue: identifier)!
+            guard let id = KeyTypeIdentifier(rawValue: identifier) else {
+                throw CoseError.invalidAlgorithm("Unknown identifier \(identifier)")
+            }
+            return id
         } else {
             throw CoseError
                 .invalidKeyType("Key Type not found in KTY instance")

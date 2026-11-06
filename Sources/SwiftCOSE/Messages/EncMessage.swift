@@ -136,13 +136,16 @@ public class EncMessage: EncCommon {
                 .computeCEK(targetAlgorithm: targetAlgorithm, ops: "encrypt")
             return try super.encrypt()
         } else if recipientTypes.contains(describe(KeyWrap.self)) || recipientTypes.contains(describe(KeyAgreementWithKeyWrap.self)) {
-            var keyBytes = Data.randomBytes(count: targetAlgorithm.keyLength!)
+            guard let keyLength = targetAlgorithm.keyLength else {
+                throw CoseError.invalidAlgorithm("Algorithm \(String(describing: targetAlgorithm.fullname)) has no key length")
+            }
+            var keyBytes = Data.randomBytes(count: keyLength)
             
             for recipient in recipients {
                 if recipient.payload?.isEmpty ?? true {
                     recipient.payload = keyBytes
                 } else {
-                    keyBytes = recipient.payload!
+                    keyBytes = recipient.payload ?? keyBytes
                 }
                 if let recipient = recipient as? KeyAgreementWithKeyWrap {
                     let _ = try recipient.encrypt(targetAlgorithm: targetAlgorithm)

@@ -61,7 +61,7 @@ struct CoseSignatureTests {
         
         let coseArray: [CBOR] = [
             CBOR.byteString(encoded),
-            CBOR.map([CBOR.simple(1): CBOR(Es256().identifier!)]),
+            CBOR.map([CBOR.unsignedInt(1): CBOR(Es256().identifier!)]),
             CBOR.byteString(payload)
         ]
         

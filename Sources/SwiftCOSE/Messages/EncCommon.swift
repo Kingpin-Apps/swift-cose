@@ -63,11 +63,14 @@ public class EncCommon: CoseMessage {
                 algorithm: alg,
                 keyOps: [DecryptOp()]
             )
+        guard let symmetricKey = key as? CoseSymmetricKey else {
+            throw CoseError.invalidKey("Key must be of type SymmetricKey.")
+        }
         
         if let alg = alg as? AesCcmAlgorithm {
             return try alg
                 .decrypt(
-                    key: key as! CoseSymmetricKey,
+                    key: symmetricKey,
                     nonce: nonce,
                     ciphertext: payload,
                     aad: encStructure
@@ -75,7 +78,7 @@ public class EncCommon: CoseMessage {
         } else if let alg = alg as? AesGcmAlgorithm {
             return try alg
                 .decrypt(
-                    key: key as! CoseSymmetricKey,
+                    key: symmetricKey,
                     nonce: nonce,
                     ciphertext: payload,
                     aad: encStructure
@@ -109,11 +112,14 @@ public class EncCommon: CoseMessage {
                 algorithm: alg,
                 keyOps: [EncryptOp()]
             )
+        guard let symmetricKey = key as? CoseSymmetricKey else {
+            throw CoseError.invalidKey("Key must be of type SymmetricKey.")
+        }
         
         if let alg = alg as? AesCcmAlgorithm {
             return try alg
                 .encrypt(
-                    key: key as! CoseSymmetricKey,
+                    key: symmetricKey,
                     nonce: nonce,
                     data: payload,
                     aad: encStructure
@@ -121,7 +127,7 @@ public class EncCommon: CoseMessage {
         } else if let alg = alg as? AesGcmAlgorithm {
             return try alg
                 .encrypt(
-                    key: key as! CoseSymmetricKey,
+                    key: symmetricKey,
                     nonce: nonce,
                     data: payload,
                     aad: encStructure

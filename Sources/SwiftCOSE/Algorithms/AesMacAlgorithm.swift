@@ -28,7 +28,7 @@ public class AesMacAlgorithm: CoseAlgorithm {
         
         let cbc = CBC(iv: Data(repeating: 0, count: blockSize).toBytes)
 
-        let aes = try! AES(
+        let aes = try AES(
             key: key.k.toBytes,
             blockMode: cbc
         )

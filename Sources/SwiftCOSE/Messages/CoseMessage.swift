@@ -195,12 +195,20 @@ public class CoseMessage: CoseBase, CustomStringConvertible {
     ///   - received: COSE messages encoded as bytes
     /// - Returns: The decoded COSE message.
     public class func decode<T: CoseMessage>(_ type: T.Type, from received: Data) throws -> T {
-        let cborMsg = try CBORSerialization.cbor(from: received)
+        let cborMsg: CBOR
+        do {
+            cborMsg = try CBORSerialization.cborRejectingDuplicateKeys(from: received)
+        } catch let error as CoseError {
+            throw error
+        } catch {
+            throw CoseError.invalidMessage("Malformed CBOR: \(error)")
+        }
         
         let cborObj: CBOR
         let messageClass: CoseMessage.Type
         if case let .tagged(tag, cborData) = cborMsg {
-            guard let messageId = CoseMessageIdentifier(rawValue: Int(tag)) else {
+            guard let tagValue = Int(exactly: tag),
+                  let messageId = CoseMessageIdentifier(rawValue: tagValue) else {
                 throw CoseError.invalidMessage("Unknown COSE message tag \(tag).")
             }
             messageClass = getInstance(for: messageId)

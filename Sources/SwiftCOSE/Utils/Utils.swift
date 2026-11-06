@@ -81,13 +81,22 @@ open class CoseAttribute: Comparable, Hashable, CustomStringConvertible, CustomD
         }
     }
     
+    // Attributes match by identifier; attributes without one (custom text
+    // labels) match by name. Hashing uses the same key, so equal attributes
+    // always hash alike.
     public func hash(into hasher: inout Hasher) {
-        hasher.combine(identifier)
-        hasher.combine(fullname)
+        if let identifier {
+            hasher.combine(identifier)
+        } else {
+            hasher.combine(fullname)
+        }
     }
 
     public static func == (lhs: CoseAttribute, rhs: CoseAttribute) -> Bool {
-        return lhs.identifier == rhs.identifier
+        if lhs.identifier != nil || rhs.identifier != nil {
+            return lhs.identifier == rhs.identifier
+        }
+        return lhs.fullname == rhs.fullname
     }
     
     public static func < (lhs: CoseAttribute, rhs: CoseAttribute) -> Bool {
@@ -117,4 +126,10 @@ open class CoseAttribute: Comparable, Hashable, CustomStringConvertible, CustomD
 //        try container.encode(identifier, forKey: .identifier)
 ////        try container.encode(fullname, forKey: .fullname)
 //    }
+}
+
+/// `Int(exactly:)` for an integer of any width, including an existential
+/// `any BinaryInteger`. Returns nil instead of trapping when it does not fit.
+func intExactly<T: BinaryInteger>(_ value: T) -> Int? {
+    Int(exactly: value)
 }

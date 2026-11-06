@@ -127,20 +127,13 @@ public class CoseBase {
             throw CoseError.valueError("Cannot have both phdr and phdrEncoded")
         }
         
-        if phdrEncoded != nil {
-            if phdrEncoded!.isEmpty {
+        if let phdrEncoded {
+            if phdrEncoded.isEmpty {
                 self.phdr = [:]
             } else {
-                let decoded = try CBORSerialization.cbor(from: phdrEncoded!)
-                
-                if case let CBOR.map(decoded) = decoded {
-                    let ordered = OrderedDictionary(uniqueKeysWithValues: decoded.map { key, value in
-                        (key.unwrapped as! AnyHashable, value.unwrapped!)
-                    })
-                    self.phdr = try CoseBase.parseHeader(hdr: ordered)
-                } else {
-                    throw CoseError.valueError("Protected header must be a CBOR map")
-                }
+                // The protected header bytes hold exactly one header map.
+                let decoded = try CBORSerialization.cborRejectingDuplicateKeys(from: phdrEncoded)
+                self.phdr = try CoseBase.parseHeader(hdr: headerMap(from: decoded))
                 
                 if let algId = self.phdr[Algorithm()] {
                     let coseAlg = try CoseAlgorithm.fromId(for: algId)
@@ -152,7 +145,7 @@ public class CoseBase {
             self.phdr = [:]
         }
 
-        self.uhdr = uhdr ?? [:] as! OrderedDictionary<CoseHeaderAttribute, Any>
+        self.uhdr = uhdr ?? [:]
         
         if let algId = self.uhdr[Algorithm()] {
             let coseAlg = try CoseAlgorithm.fromId(for: algId)
@@ -179,13 +172,7 @@ public class CoseBase {
             throw CoseError.invalidMessage("The protected header must be a byte string")
         }
         
-        guard case let .map(uhdrCBORMap) = coseObj[1] else {
-            throw CoseError.invalidMessage("The unprotected header must be a map")
-        }
-        let uhdrMap = OrderedDictionary(uniqueKeysWithValues: uhdrCBORMap.map { key, value in
-            (key.unwrapped as! AnyHashable, value.unwrapped!)
-        })
-        unprotectedAttributes = try parseHeader(hdr: uhdrMap)
+        unprotectedAttributes = try parseHeader(hdr: headerMap(from: coseObj[1]))
 
         return try CoseBase(
             uhdr: unprotectedAttributes,
@@ -246,9 +233,10 @@ public class CoseBase {
                     decodedHdr[attr] = value
                 }
             } else {
+                // Keep unknown labels, integer or text, under their own label.
                 let attr = CoseHeaderAttribute(
-                    customIdentifier: nil,
-                    fullname: key as? String
+                    customIdentifier: key.base as? Int,
+                    fullname: key.base as? String
                 )
                 decodedHdr[attr] = value
             }

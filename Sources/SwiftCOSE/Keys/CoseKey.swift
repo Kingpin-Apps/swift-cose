@@ -23,10 +23,10 @@ public class CoseKey: CustomStringConvertible {
                 $0.key == KpKeyOps() as AnyHashable || $0.key == KpKeyOps().identifier as AnyHashable || $0.key == KpKeyOps().fullname as AnyHashable
             })?.value
             
-            if let value = value {
-                return (value as! Array<Any>).map {
-                    try! KeyOps.fromId(for: $0)
-                }
+            // Unknown or malformed operations are skipped rather than
+            // trapping: key parameters can come from received messages.
+            if let values = value as? [Any] {
+                return values.compactMap { try? KeyOps.fromId(for: $0) }
             }
             return []
         }
@@ -42,7 +42,7 @@ public class CoseKey: CustomStringConvertible {
             })?.value
             
             if let value = value {
-                return try! KTY.fromId(for: value)
+                return try? KTY.fromId(for: value)
             }
             return nil
         }
@@ -58,7 +58,7 @@ public class CoseKey: CustomStringConvertible {
             })?.value
             
             if let value = value {
-                return try! CoseAlgorithm.fromId(for: value)
+                return try? CoseAlgorithm.fromId(for: value)
             }
             return nil
         }
@@ -103,7 +103,7 @@ public class CoseKey: CustomStringConvertible {
        switch attribute {
            case let id as any BinaryInteger:
                // If the identifier is an Int, convert it to KeyTypeIdentifier
-               guard let type = KeyTypeIdentifier(rawValue: Int(id)) else {
+               guard let intId = intExactly(id), let type = KeyTypeIdentifier(rawValue: intId) else {
                    throw CoseError.invalidKeyType("Unknown type identifier")
                }
                return getInstance(for: type)
@@ -120,7 +120,10 @@ public class CoseKey: CustomStringConvertible {
                return getInstance(for: type)
 
            case let attr as CoseAttribute:
-               let type = try KeyTypeIdentifier.fromKTY(attr as! KTY)
+               guard let kty = attr as? KTY else {
+                   throw CoseError.invalidKeyType("Attribute is not a key type")
+               }
+               let type = try KeyTypeIdentifier.fromKTY(kty)
                return getInstance(for: type)
 
            default:
@@ -218,13 +221,11 @@ public class CoseKey: CustomStringConvertible {
     /// - Parameter received: A CBOR-encoded bytestring.
     /// - Returns: An initialized COSE key.
     public static func decode(_ received: Data) throws -> CoseKey? {
-        let cbor = try CBORSerialization.cbor(from: received)
-        let mapValue = cbor.mapValue ?? [:]
-        let dict = mapValue.reduce(into: [AnyHashable: Any]()) { result, entry in
-            let k = normalizeInt(entry.key.unwrapped!)
-            let v = normalizeInt(entry.value.unwrapped!)
-
-            result[k as! AnyHashable] = v
+        let cbor = try CBORSerialization.cborRejectingDuplicateKeys(from: received)
+        // COSE_Key labels follow the same rules as header labels.
+        var dict: [AnyHashable: Any] = [:]
+        for (key, value) in try headerMap(from: cbor) {
+            dict[key] = normalizeInt(value)
         }
         return try fromDictionary(dict)
     }

@@ -81,14 +81,20 @@ public class OKPKey: CoseKey {
     ///   - d: Private value of the OKP key.
     ///   - optionalParams: A dictionary with optional key parameters.
     public init(curve: CoseCurve, x: Data? = nil, d: Data? = nil, optionalParams: [AnyHashable: Any] = [:]) throws {
+        // The curve setter traps on a curve of another key type; a curve
+        // can come from a received key, so reject it here instead.
+        guard curve.keyType == .ktyOKP else {
+            throw CoseError.invalidCurve("Invalid COSE curve \(curve) for key type OKPKey")
+        }
+        
         var transformedDict: [AnyHashable: Any] = [KpKty(): KtyOKP()]
         
         // Transform optional parameters
         for (key, value) in optionalParams {
             let kp = try OKPKeyParam.fromId(for: key)
             if let parser = kp.valueParser {
-                if value is Array<AnyHashable> {
-                    transformedDict[kp] = try (value as! Array<AnyHashable>).map { try parser($0) }
+                if let values = value as? Array<AnyHashable> {
+                    transformedDict[kp] = try values.map { try parser($0) }
                 } else {
                     transformedDict[kp] = try parser(value)
                 }
@@ -98,7 +104,7 @@ public class OKPKey: CoseKey {
         }
         
         // Validate key type
-        guard transformedDict[KpKty()] as! CoseAttribute == KtyOKP() else {
+        guard let ktyValue = transformedDict[KpKty()] as? CoseAttribute, ktyValue == KtyOKP() else {
             throw CoseError.invalidKey("Illegal key type in OKP COSE Key: \(String(describing: transformedDict[KpKty()]))")
         }
         

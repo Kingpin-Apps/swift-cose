@@ -70,7 +70,7 @@ struct CoseRecipientTests {
         let coseArray: [CBOR] = [
             CBOR.byteString(Data()),  // zero-length Protected header for DIRECT_ENCRYPTION
             CBOR.map([
-                CBOR.simple(1): CBOR(Direct().identifier!)
+                CBOR.unsignedInt(1): CBOR(Direct().identifier!)
             ]),
             CBOR.byteString(Data())  // zero-length ciphertext for DIRECT_ENCRYPTION
         ]
@@ -86,7 +86,7 @@ struct CoseRecipientTests {
     @Test func testCreateRecipientError() async throws {
         let coseArray: [CBOR] = [
             CBOR.map([
-                CBOR.simple(1): CBOR(Direct().identifier!)
+                CBOR.unsignedInt(1): CBOR(Direct().identifier!)
             ]),
         ]
         

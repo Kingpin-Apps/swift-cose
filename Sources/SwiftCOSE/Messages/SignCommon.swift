@@ -41,6 +41,16 @@ public class SignCommon: CoseMessage {
         }
     }
 
+    /// The message key as the type the algorithm needs. The algorithm comes
+    /// from the header, so a received message can name one that does not
+    /// match the key; that is an error, not a crash.
+    private func requireKey<K: CoseKey>(_ type: K.Type, for alg: CoseAlgorithm) throws -> K {
+        guard let key = self.key as? K else {
+            throw CoseError.invalidKey("Algorithm \(String(describing: alg.fullname)) needs a \(K.self)")
+        }
+        return key
+    }
+
     /// Verifies the signature of a received COSE message.
     /// - Parameters:
     ///   - detachedPayload: The optional detached payload.
@@ -54,24 +64,27 @@ public class SignCommon: CoseMessage {
         let data = try createSignatureStructure(
             detachedPayload: detachedPayload
         )
+        guard let signature = self.signature else {
+            throw CoseError.invalidMessage("The message has no signature to verify")
+        }
         
         if let alg = alg as? EcdsaAlgorithm {
             return try alg.verify(
-                key: self.key as! EC2Key,
+                key: try requireKey(EC2Key.self, for: alg),
                 data: data,
-                signature: self.signature!
+                signature: signature
             )
         } else if let alg = alg as? EdDSAAlgorithm {
             return try alg.verify(
-                key: self.key as! OKPKey,
+                key: try requireKey(OKPKey.self, for: alg),
                 data: data,
-                signature: self.signature!
+                signature: signature
             )
         } else if let alg = alg as? RsaAlgorithm {
             return try alg.verify(
-                key: self.key as! RSAKey,
+                key: try requireKey(RSAKey.self, for: alg),
                 data: data,
-                signature: self.signature!
+                signature: signature
             )
         } else {
             throw CoseError.invalidAlgorithm("Unsupported algorithm")
@@ -91,17 +104,17 @@ public class SignCommon: CoseMessage {
         
         if let alg = alg as? EcdsaAlgorithm {
             return try alg.sign(
-                key: self.key as! EC2Key,
+                key: try requireKey(EC2Key.self, for: alg),
                 data: createSignatureStructure(detachedPayload: detachedPayload)
             )
         } else if let alg = alg as? EdDSAAlgorithm {
             return try alg.sign(
-                key: self.key as! OKPKey,
+                key: try requireKey(OKPKey.self, for: alg),
                 data: createSignatureStructure(detachedPayload: detachedPayload)
             )
         } else if let alg = alg as? RsaAlgorithm {
             return try alg.sign(
-                key: self.key as! RSAKey,
+                key: try requireKey(RSAKey.self, for: alg),
                 data: createSignatureStructure(detachedPayload: detachedPayload)
             )
         } else {

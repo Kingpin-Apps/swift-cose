@@ -35,7 +35,7 @@ struct KeyAgreementWithKeyWrapTests {
         let coseArray: [CBOR] = [
             CBOR.byteString(Data()),  // Zero-length protected header
             CBOR.map([
-                CBOR.simple(1): CBOR(Direct().identifier!) // Algorithm
+                CBOR.unsignedInt(1): CBOR(Direct().identifier!) // Algorithm
             ]),
             CBOR.byteString(wrappedCEK)
         ]
@@ -51,7 +51,7 @@ struct KeyAgreementWithKeyWrapTests {
     @Test func testFromCoseObjectRejectsEmptyCiphertext() async throws {
         let coseArray: [CBOR] = [
             CBOR.byteString(Data()),
-            CBOR.map([CBOR.simple(1): CBOR(Direct().identifier!)]),
+            CBOR.map([CBOR.unsignedInt(1): CBOR(Direct().identifier!)]),
             CBOR.byteString(Data())  // Zero-length ciphertext
         ]
         

@@ -124,6 +124,12 @@ public class EC2Key: CoseKey {
     ///   - d: The private key of the key.
     ///   - optionalParams: Additional parameters for the key.
     init(curve: CoseCurve, x: Data? = nil, y: Data? = nil, d: Data? = nil, optionalParams: [AnyHashable: Any] = [:]) throws {
+        // The curve setter traps on a curve of another key type; a curve
+        // can come from a received key, so reject it here instead.
+        guard curve.keyType == .ktyEC2 else {
+            throw CoseError.invalidCurve("Invalid COSE curve \(curve) for key type EC2Key")
+        }
+        
         var transformedDict: [AnyHashable: Any] = [KpKty(): KtyEC2()]
         
         // Transform optional parameters
@@ -137,7 +143,7 @@ public class EC2Key: CoseKey {
         }
         
         // Validate key type
-        guard transformedDict[KpKty()] as! CoseAttribute == KtyEC2() else {
+        guard let ktyValue = transformedDict[KpKty()] as? CoseAttribute, ktyValue == KtyEC2() else {
             throw CoseError.invalidKey("Illegal key type in EC2 COSE Key: \(String(describing: transformedDict[KpKty()]))")
         }
         
@@ -206,16 +212,18 @@ public class EC2Key: CoseKey {
         
         // extractFromDict defaults a missing component to empty bytes;
         // treat that as absent so public-only keys load.
-        func component(_ value: Any) -> Data? {
-            guard let data = value as? Data, !data.isEmpty else { return nil }
-            return data
+        func component(_ value: Any) throws -> Data? {
+            guard let data = value as? Data else {
+                throw CoseError.invalidKey("EC2 key components must be byte strings")
+            }
+            return data.isEmpty ? nil : data
         }
         
         return try EC2Key(
             curve: curve,
-            x: component(x),
-            y: component(y),
-            d: component(d),
+            x: try component(x),
+            y: try component(y),
+            d: try component(d),
             optionalParams: optionalParams
         )
     }

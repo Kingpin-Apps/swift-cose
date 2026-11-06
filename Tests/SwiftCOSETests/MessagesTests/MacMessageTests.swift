@@ -67,7 +67,7 @@ struct MacMessageTests {
         let recipient: [CBOR] = [
             CBOR.byteString(Data()),  // Zero-length protected header
             CBOR.map([
-                CBOR.simple(1): CBOR(Direct().identifier!) // Algorithm
+                CBOR.unsignedInt(1): CBOR(Direct().identifier!) // Algorithm
             ]),
             CBOR.byteString(Data())  // Zero-length ciphertext
         ]
@@ -79,8 +79,8 @@ struct MacMessageTests {
         let coseArray: [CBOR] = [
             CBOR.byteString(encoded),
             CBOR.map([
-                CBOR.simple(1): CBOR(Direct().identifier!),
-                CBOR.simple(5): CBOR(Data([0x05, 0x06, 0x07, 0x08]))
+                CBOR.unsignedInt(1): CBOR(Direct().identifier!),
+                CBOR.unsignedInt(5): CBOR(Data([0x05, 0x06, 0x07, 0x08]))
             ]),
             CBOR.byteString(payload),
             CBOR.byteString(authTag),

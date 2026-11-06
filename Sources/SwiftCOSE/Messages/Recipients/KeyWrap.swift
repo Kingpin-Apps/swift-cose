@@ -196,6 +196,13 @@ public class KeyWrap: CoseRecipient {
 
     }
     
+    private func encAlgorithm(_ algorithm: CoseAlgorithm) throws -> EncAlgorithm {
+        guard let encAlgorithm = algorithm as? EncAlgorithm else {
+            throw CoseError.invalidAlgorithm("Algorithm \(String(describing: algorithm.fullname)) is not a content encryption algorithm")
+        }
+        return encAlgorithm
+    }
+    
     public func decrypt(targetAlgorithm: CoseAlgorithm) throws -> Data {
         guard let alg = try getAttr(Algorithm()) as? CoseAlgorithm else {
             throw CoseError.invalidAlgorithm("The algorithm parameter should be included in either the protected header or unprotected header.")
@@ -209,7 +216,7 @@ public class KeyWrap: CoseRecipient {
             case .aesKW_128, .aesKW_192, .aesKW_256:
                 let kek = try CoseSymmetricKey(
                     k: try computeKEK(
-                        targetAlgorithm: targetAlgorithm as! EncAlgorithm,
+                        targetAlgorithm: try encAlgorithm(targetAlgorithm),
                         ops: "decrypt"
                     ),
                     optionalParams: [KpAlg(): alg, KpKeyOps(): keyOps]

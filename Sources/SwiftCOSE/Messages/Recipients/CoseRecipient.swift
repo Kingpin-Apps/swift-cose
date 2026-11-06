@@ -95,9 +95,11 @@ public class CoseRecipient: CoseMessage {
     public class func fromAlgorithm(algorithm: CoseAlgorithm) -> CoseRecipient.Type? {
         let algorithmIdentifier: CoseAlgorithmIdentifier
         if let fullname = algorithm.fullname {
-            algorithmIdentifier = CoseAlgorithmIdentifier.fromFullName(fullname)!
-        } else if let identifier = algorithm.identifier{
-            algorithmIdentifier = CoseAlgorithmIdentifier(rawValue: identifier)!
+            guard let id = CoseAlgorithmIdentifier.fromFullName(fullname) else { return nil }
+            algorithmIdentifier = id
+        } else if let identifier = algorithm.identifier {
+            guard let id = CoseAlgorithmIdentifier(rawValue: identifier) else { return nil }
+            algorithmIdentifier = id
         } else {
             return nil
         }
@@ -129,16 +131,8 @@ public class CoseRecipient: CoseMessage {
         var pHdr: OrderedDictionary<CoseHeaderAttribute, Any> = [:]
         
         if let pBytes = protectedHeader.byteStringValue, !pBytes.isEmpty {
-            let decoded = try CBORSerialization.cbor(from: pBytes)
-            
-            if case let CBOR.map(decoded) = decoded {
-                let ordered = OrderedDictionary(uniqueKeysWithValues: decoded.map { key, value in
-                    (key.unwrapped as! AnyHashable, value.unwrapped!)
-                })
-                pHdr = try parseHeader(hdr: ordered)
-            } else {
-                throw CoseError.valueError("Protected header must be a CBOR map")
-            }
+            let decoded = try CBORSerialization.cborRejectingDuplicateKeys(from: pBytes)
+            pHdr = try parseHeader(hdr: headerMap(from: decoded))
             
             if let alg = pHdr[Algorithm()] {
                 pAlg = try CoseAlgorithm.fromId(for: alg)
@@ -157,14 +151,7 @@ public class CoseRecipient: CoseMessage {
         let unprotectedHeader = recipient[1]
         var unprotectedAttributes: OrderedDictionary<CoseHeaderAttribute, Any> = [:]
         
-        if case let CBOR.map(decoded) = unprotectedHeader {
-            let ordered = OrderedDictionary(uniqueKeysWithValues: decoded.map { key, value in
-                (key.unwrapped as! AnyHashable, value.unwrapped!)
-            })
-            unprotectedAttributes = try parseHeader(hdr: ordered)
-        } else {
-            throw CoseError.valueError("Unprotected header must be a CBOR map")
-        }
+        unprotectedAttributes = try parseHeader(hdr: headerMap(from: unprotectedHeader))
         
         // Extract the algorithm from unprotected attributes
         if let alg = unprotectedAttributes[Algorithm()] {

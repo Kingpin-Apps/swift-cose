@@ -33,7 +33,7 @@ struct KeyWrapTests {
         let coseArray: [CBOR] = [
             CBOR.byteString(Data()),  // Zero-length protected header
             CBOR.map([
-                CBOR.simple(1): CBOR(A128KW().identifier!) // Algorithm
+                CBOR.unsignedInt(1): CBOR(A128KW().identifier!) // Algorithm
             ]),
             CBOR.byteString(Data())  // Zero-length ciphertext
         ]

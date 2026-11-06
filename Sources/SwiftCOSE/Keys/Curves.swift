@@ -92,7 +92,7 @@ public class CoseCurve: CoseAttribute {
         switch attribute {
             case let id as any BinaryInteger:
                 // If the identifier is an Int, convert it to CoseCurveIdentifier
-                guard let curve = CoseCurveIdentifier(rawValue: Int(id)) else {
+                guard let intId = intExactly(id), let curve = CoseCurveIdentifier(rawValue: intId) else {
                     throw CoseError.invalidCurve("Unknown curve identifier")
                 }
                 return getInstance(for: curve)

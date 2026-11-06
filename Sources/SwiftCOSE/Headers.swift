@@ -1,5 +1,6 @@
 import Foundation
 import OrderedCollections
+import CBORCodable
 
 public struct Headers {
     public var protected: Data?
@@ -101,7 +102,7 @@ open class CoseHeaderAttribute: CoseAttribute {
             case let id as any BinaryInteger:
                 // Accept any integer width — on swift-corelibs-foundation (Linux/Windows),
                 // CBOR decode yields UInt64/Int64 keys that do not bridge to Int via `as?`.
-                guard let hdr = CoseHeaderIdentifier(rawValue: Int(id)) else {
+                guard let intId = exactInt(id), let hdr = CoseHeaderIdentifier(rawValue: intId) else {
                     throw CoseError.invalidHeader("Unknown header identifier")
                 }
                 return getInstance(for: hdr)
@@ -323,7 +324,9 @@ func isCoseKey(_ value: Any) throws -> Any {
         return value
     }
     let entries: [(AnyHashable, Any)]
-    if let map = value as? OrderedDictionary<AnyHashable, Any?> {
+    if let map = value as? OrderedDictionary<AnyHashable, Any> {
+        entries = map.map { ($0.key, $0.value) }
+    } else if let map = value as? OrderedDictionary<AnyHashable, Any?> {
         entries = map.compactMap { key, value in value.map { (key, $0) } }
     } else if let map = value as? [AnyHashable: Any] {
         entries = map.map { ($0.key, $0.value) }
@@ -332,6 +335,11 @@ func isCoseKey(_ value: Any) throws -> Any {
     }
     
     // Decoded CBOR integers arrive as UInt64/Int64; key lookups use Int.
+    func normalize(_ value: AnyHashable) -> AnyHashable {
+        if let v = value.base as? UInt64, let i = Int(exactly: v) { return i }
+        if let v = value.base as? Int64, let i = Int(exactly: v) { return i }
+        return value
+    }
     func normalize(_ value: Any) -> Any {
         if let v = value as? UInt64, let i = Int(exactly: v) { return i }
         if let v = value as? Int64, let i = Int(exactly: v) { return i }
@@ -339,9 +347,71 @@ func isCoseKey(_ value: Any) throws -> Any {
     }
     var dict: [AnyHashable: Any] = [:]
     for (key, value) in entries {
-        dict[normalize(key) as! AnyHashable] = normalize(value)
+        dict[normalize(key)] = normalize(value)
     }
     return try CoseKey.fromDictionary(dict)
+}
+
+// MARK: - Decoding header maps
+
+/// Converts a decoded CBOR header map into label/value pairs.
+///
+/// RFC 9052, section 3: labels are integers or text strings and must not
+/// repeat. Anything else throws instead of trapping, because the bytes come
+/// from the network.
+func headerMap(from cbor: CBOR) throws -> OrderedDictionary<AnyHashable, Any> {
+    let entries: OrderedDictionary<CBOR, CBOR>
+    switch cbor {
+        case .map(let map), .indefiniteMap(let map):
+            entries = map
+        default:
+            throw CoseError.invalidHeader("A header must be a CBOR map")
+    }
+    
+    var result = OrderedDictionary<AnyHashable, Any>()
+    for (key, value) in entries {
+        let label: AnyHashable
+        switch key {
+            case .unsignedInt(let u):
+                guard let i = Int(exactly: u) else {
+                    throw CoseError.invalidHeader("Header label \(u) is out of range")
+                }
+                label = i
+            case .negativeInt(let n):
+                guard let i = Int(exactly: n), i < Int.max else {
+                    throw CoseError.invalidHeader("Header label is out of range")
+                }
+                label = -1 - i
+            case .textString(let text):
+                label = text
+            default:
+                throw CoseError.invalidHeader("Header labels must be integers or text strings")
+        }
+        guard result[label] == nil else {
+            throw CoseError.invalidHeader("Duplicate header label \(label)")
+        }
+        result[label] = headerValue(value)
+    }
+    return result
+}
+
+/// Converts a decoded CBOR header value into a Swift value, keeping
+/// integers as `Int` where they fit. Values with no Swift equivalent (such
+/// as `null`) stay as `CBOR`, so the header parsers reject them.
+func headerValue(_ value: CBOR) -> Any {
+    switch value {
+        case .unsignedInt(let u):
+            if let i = Int(exactly: u) { return i }
+            return u
+        case .negativeInt(let n):
+            if let i = Int(exactly: n), i < Int.max { return -1 - i }
+            return value
+        case .map, .indefiniteMap:
+            if let map = try? headerMap(from: value) { return map }
+            return value.unwrapped ?? value
+        default:
+            return value.unwrapped ?? value
+    }
 }
 
 public func critIsArray(_ value: Any) throws -> Any {
@@ -352,7 +422,7 @@ public func critIsArray(_ value: Any) throws -> Any {
     return value
 }
 
-private func exactInt<T: BinaryInteger>(_ value: T) -> Int? {
+fileprivate func exactInt<T: BinaryInteger>(_ value: T) -> Int? {
     Int(exactly: value)
 }
 

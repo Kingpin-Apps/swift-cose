@@ -72,7 +72,7 @@ public class CoseSymmetricKey: CoseKey {
         }
         
         // Validate key type
-        guard transformedDict[KpKty()] as! CoseAttribute == KtySymmetric() else {
+        guard let ktyValue = transformedDict[KpKty()] as? CoseAttribute, ktyValue == KtySymmetric() else {
             throw CoseError.invalidKey("Illegal key type in Symmetric COSE Key: \(String(describing: transformedDict[KpKty()]))")
         }
         
@@ -94,8 +94,11 @@ public class CoseSymmetricKey: CoseKey {
         var optionalParams: [AnyHashable : Any] = coseKey
         CoseKey.removeFromDict(&optionalParams, parameter: SymKpK())
         
+        guard let kBytes = k as? Data else {
+            throw CoseError.invalidKey("A symmetric COSE key needs a byte string k")
+        }
         return try CoseSymmetricKey(
-            k: k as! Data,
+            k: kBytes,
             optionalParams: optionalParams
         )
         

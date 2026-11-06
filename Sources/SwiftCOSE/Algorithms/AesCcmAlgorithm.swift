@@ -23,7 +23,7 @@ public class AesCcmAlgorithm: EncAlgorithm {
             additionalAuthenticatedData: aad?.toBytes
         )
         
-        let aes = try! AES(
+        let aes = try AES(
             key: key.k.toBytes,
             blockMode: ccm,
             padding: .noPadding
@@ -45,7 +45,7 @@ public class AesCcmAlgorithm: EncAlgorithm {
             additionalAuthenticatedData: aad?.toBytes
         )
         
-        let aes = try! AES(
+        let aes = try AES(
             key: key.k.toBytes,
             blockMode: ccm,
             padding: .noPadding

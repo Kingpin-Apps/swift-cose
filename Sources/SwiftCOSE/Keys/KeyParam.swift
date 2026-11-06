@@ -56,7 +56,7 @@ public class KeyParam: CoseAttribute {
     public class func fromId(for identifier: Any) throws -> KeyParam {
         switch identifier {
             case let id as any BinaryInteger:
-                guard let keyType = KeyParamIdentifier(rawValue: Int(id)) else {
+                guard let intId = intExactly(id), let keyType = KeyParamIdentifier(rawValue: intId) else {
                     throw CoseError.invalidKeyType("Unknown KeyParam identifier: \(id)")
                 }
                 return getInstance(for: keyType)
@@ -610,9 +610,15 @@ public enum SymmetricKeyParamIdentifier: Int, CaseIterable, Sendable {
     
     public static func fromSymmetricKeyParam(_ keyParam: KeyParam) throws -> SymmetricKeyParamIdentifier {
         if let fullname = keyParam.fullname {
-            return SymmetricKeyParamIdentifier.fromFullName(fullname)!
+            guard let id = SymmetricKeyParamIdentifier.fromFullName(fullname) else {
+                throw CoseError.invalidAlgorithm("Unknown fullname \(fullname)")
+            }
+            return id
         } else if let identifier = keyParam.identifier {
-            return SymmetricKeyParamIdentifier(rawValue: identifier)!
+            guard let id = SymmetricKeyParamIdentifier(rawValue: identifier) else {
+                throw CoseError.invalidAlgorithm("Unknown identifier \(identifier)")
+            }
+            return id
         } else {
             throw CoseError
                 .invalidKeyType("Key Parameters not properly initialized")
@@ -662,8 +668,8 @@ public class SymmetricKeyParam: KeyParam {
             case let type as SymmetricKeyParamIdentifier:
                 return getInstance(for: type)
 
-            case let type as CoseAttribute:
-                let keyType = try SymmetricKeyParamIdentifier.fromSymmetricKeyParam(type as! KeyParam)
+            case let type as KeyParam:
+                let keyType = try SymmetricKeyParamIdentifier.fromSymmetricKeyParam(type)
                 return getInstance(for: keyType)
             default:
                 throw CoseError.invalidKeyType("Unsupported identifier type: \(type(of: identifier))")

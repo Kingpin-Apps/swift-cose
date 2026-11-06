@@ -150,7 +150,7 @@ public class RSAKey: CoseKey {
         }
         
         // Validate key type
-        guard transformedDict[KpKty()] as! CoseAttribute == KtyRSA() else {
+        guard let ktyValue = transformedDict[KpKty()] as? CoseAttribute, ktyValue == KtyRSA() else {
             throw CoseError.invalidKey("Illegal key type in RSA COSE Key: \(String(describing: transformedDict[KpKty()]))")
         }
         
@@ -285,11 +285,11 @@ public class RSAKey: CoseKey {
             dp: dp as? Data,
             dq: dq as? Data,
             qInv: qInv as? Data,
-            other: other as! [[String: Any]],
+            other: other as? [[String: Any]] ?? [],
             r_i: r_i as? Data,
             d_i: d_i as? Data,
             t_i: t_i as? Data,
-            optionalParams: optionalParams as! [String : Any]
+            optionalParams: optionalParams
         )
     }
     

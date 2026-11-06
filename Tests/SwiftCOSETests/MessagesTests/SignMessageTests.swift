@@ -59,7 +59,7 @@ struct CoseSignMessageTests {
         let signature: [CBOR] = [
             CBOR.byteString(Data()),  // Zero-length protected header
             CBOR.map([
-                CBOR.simple(1): CBOR(Es256().identifier!) // Algorithm
+                CBOR.unsignedInt(1): CBOR(Es256().identifier!) // Algorithm
             ]),
             CBOR.byteString(Data())  // Zero-length ciphertext
         ]
@@ -70,7 +70,7 @@ struct CoseSignMessageTests {
         
         let coseArray: [CBOR] = [
             CBOR.byteString(encoded),
-            CBOR.map([CBOR.simple(1): CBOR(Es256().identifier!)]),
+            CBOR.map([CBOR.unsignedInt(1): CBOR(Es256().identifier!)]),
             CBOR.byteString(payload),
             CBOR.array(signatures)
         ]

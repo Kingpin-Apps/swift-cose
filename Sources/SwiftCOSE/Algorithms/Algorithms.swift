@@ -63,9 +63,15 @@ public enum CoseAlgorithmIdentifier: Int, CaseIterable, Sendable {
     
     public static func fromCoseAlgorithm(_ alg: CoseAlgorithm) throws -> CoseAlgorithmIdentifier {
         if let fullname = alg.fullname {
-            return CoseAlgorithmIdentifier.fromFullName(fullname)!
+            guard let id = CoseAlgorithmIdentifier.fromFullName(fullname) else {
+                throw CoseError.invalidAlgorithm("Unknown fullname \(fullname)")
+            }
+            return id
         } else if let identifier = alg.identifier {
-            return CoseAlgorithmIdentifier(rawValue: identifier)!
+            guard let id = CoseAlgorithmIdentifier(rawValue: identifier) else {
+                throw CoseError.invalidAlgorithm("Unknown identifier \(identifier)")
+            }
+            return id
         } else {
             throw CoseError.invalidAlgorithm("Algorithm not found in protected headers")
         }

@@ -65,8 +65,8 @@ struct Mac0MessageTests {
         let coseArray: [CBOR] = [
             CBOR.byteString(encoded),
             CBOR.map([
-                CBOR.simple(1): CBOR(Direct().identifier!), // Algorithm
-                CBOR.simple(5): CBOR(Data([0x05, 0x06, 0x07, 0x08])) // IV
+                CBOR.unsignedInt(1): CBOR(Direct().identifier!), // Algorithm
+                CBOR.unsignedInt(5): CBOR(Data([0x05, 0x06, 0x07, 0x08])) // IV
             ]),
             CBOR.byteString(payload),
             CBOR.byteString(authTag)
@@ -122,7 +122,7 @@ struct Mac0MessageTests {
     @Test func testInvalidCoseObject() async throws {
         let invalidCoseArray: [CBOR] = [
             CBOR.map([
-                CBOR.simple(1): CBOR(A128GCM().identifier!)  // Algorithm
+                CBOR.unsignedInt(1): CBOR(A128GCM().identifier!)  // Algorithm
             ])
         ]
         

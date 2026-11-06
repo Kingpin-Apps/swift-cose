@@ -63,7 +63,10 @@ public class DirectEncryption: CoseRecipient {
         let algorithm: CoseAlgorithm
 //        let algId: CoseAlgorithmIdentifier
         
-        algorithm = try (msg.getAttr(Algorithm()) as? CoseAlgorithm)!
+        guard let alg = try msg.getAttr(Algorithm()) as? CoseAlgorithm else {
+            throw CoseError.invalidAlgorithm("Recipient algorithm is missing or invalid")
+        }
+        algorithm = alg
         let algId = try CoseAlgorithmIdentifier.fromCoseAlgorithm(algorithm)
         
         if algId == .direct && !directEncryptionMsg.phdr.isEmpty {
