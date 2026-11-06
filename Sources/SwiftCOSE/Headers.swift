@@ -1,4 +1,5 @@
 import Foundation
+import OrderedCollections
 
 public struct Headers {
     public var protected: Data?
@@ -239,13 +240,13 @@ public final class X5u: CoseHeaderAttribute {
 
 public final class EphemeralKey: CoseHeaderAttribute {
     public init() {
-        super.init(identifier: .ephemeralKey, fullname: "EPHEMERAL_KEY")
+        super.init(identifier: .ephemeralKey, fullname: "EPHEMERAL_KEY", valueParser: isCoseKey)
     }
 }
 
 public final class StaticKey: CoseHeaderAttribute {
     public init() {
-        super.init(identifier: .staticKey, fullname: "STATIC_KEY")
+        super.init(identifier: .staticKey, fullname: "STATIC_KEY", valueParser: isCoseKey)
     }
 }
 
@@ -316,9 +317,36 @@ public func isBstr(_ value: Any) throws -> Any {
     return value
 }
 
+/// Turns a decoded COSE_Key map in a header into a `CoseKey`.
+func isCoseKey(_ value: Any) throws -> Any {
+    if value is CoseKey {
+        return value
+    }
+    let entries: [(AnyHashable, Any)]
+    if let map = value as? OrderedDictionary<AnyHashable, Any?> {
+        entries = map.compactMap { key, value in value.map { (key, $0) } }
+    } else if let map = value as? [AnyHashable: Any] {
+        entries = map.map { ($0.key, $0.value) }
+    } else {
+        throw CoseError.invalidHeader("A key header must be a COSE_Key map")
+    }
+    
+    // Decoded CBOR integers arrive as UInt64/Int64; key lookups use Int.
+    func normalize(_ value: Any) -> Any {
+        if let v = value as? UInt64, let i = Int(exactly: v) { return i }
+        if let v = value as? Int64, let i = Int(exactly: v) { return i }
+        return value
+    }
+    var dict: [AnyHashable: Any] = [:]
+    for (key, value) in entries {
+        dict[normalize(key) as! AnyHashable] = normalize(value)
+    }
+    return try CoseKey.fromDictionary(dict)
+}
+
 public func critIsArray(_ value: Any) throws -> Any {
     guard let array = value as? [Any], !array.isEmpty,
-          array.allSatisfy({ $0 is Int || $0 is String }) else {
+          array.allSatisfy({ $0 is any BinaryInteger || $0 is String }) else {
         throw CoseError.invalidCriticalValue("Critical values must be a non-empty array of integers or strings")
     }
     return value

@@ -276,19 +276,23 @@ public class CoseRecipient: CoseMessage {
     /// - Throws: `CoseError` if an unrelated ephemeral key is already present.
     func setupEphemeralKey(peerKey: EC2Key, optionalParams: [AnyHashable: Any] = [:]) throws {
         
-        // Generate the ephemeral key using the curve from the peer key
-        self.key = try EC2Key
-            .generateKey(curve: peerKey.curve, optionalParams: optionalParams)
-        
         // Check if the ephemeral key is already set in the headers
         if let _ = try? getAttr(EphemeralKey()) {
             throw CoseError.invalidMessage("Unrelated ephemeral public key found in COSE message header")
-        } else {
-            // Strip private components from the key to keep only the public part
-            self.key!.store.removeValue(forKey: EC2KpD())  // Remove private key component
-            
-            // Update the unprotected header with the ephemeral public key
-            uhdrUpdate([EphemeralKey(): self.key!.store])
         }
+        
+        // Generate the ephemeral key using the curve from the peer key. The
+        // recipient keeps the private key for the key agreement.
+        let ephemeralKey = try EC2Key
+            .generateKey(curve: peerKey.curve, optionalParams: optionalParams)
+        self.key = ephemeralKey
+        
+        // Only the public part goes in the unprotected header.
+        let publicKey = try EC2Key(
+            curve: ephemeralKey.curve,
+            x: ephemeralKey.x,
+            y: ephemeralKey.y
+        )
+        uhdrUpdate([EphemeralKey(): publicKey])
     }
 }

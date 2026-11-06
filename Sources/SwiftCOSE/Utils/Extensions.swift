@@ -214,6 +214,9 @@ extension CBOR {
             } else {
                 return .null
             }
+        } else if let keyValue = value as? CoseKey {
+            // A COSE_Key carried in a header, e.g. an ephemeral key.
+            return .map(keyValue.store.mapKeysToCbor)
         } else if let dictValue = value as? OrderedDictionary<CoseHeaderAttribute, Any> {
             return .map(dictValue.mapKeysToCbor)
         } else if let dictValue = value as? [AnyHashable: CoseHeaderAttribute] {

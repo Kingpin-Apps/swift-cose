@@ -449,17 +449,17 @@ public func deriveKeyAgreementPrivateKey<T>(from key: Data, curve: CurveType) th
     do {
         switch curve {
             case .SECP256K1:
-                return try! P256K.KeyAgreement.PrivateKey(dataRepresentation: key) as! T
+                return try P256K.KeyAgreement.PrivateKey(dataRepresentation: key) as! T
             case .SECP256R1:
-                return try! P256.KeyAgreement.PrivateKey(rawRepresentation: key) as! T
+                return try P256.KeyAgreement.PrivateKey(rawRepresentation: key) as! T
             case .SECP384R1:
-                return try! P384.KeyAgreement.PrivateKey(rawRepresentation: key) as! T
+                return try P384.KeyAgreement.PrivateKey(rawRepresentation: key) as! T
             case .SECP521R1:
-                return try! P521.KeyAgreement.PrivateKey(rawRepresentation: key) as! T
+                return try P521.KeyAgreement.PrivateKey(rawRepresentation: key) as! T
             case .X25519:
-                return try! Curve25519.KeyAgreement.PrivateKey(rawRepresentation: key) as! T
+                return try Curve25519.KeyAgreement.PrivateKey(rawRepresentation: key) as! T
             case .X448:
-                return try! Curve448.KeyAgreement.PrivateKey(rawRepresentation: key) as! T
+                return try Curve448.KeyAgreement.PrivateKey(rawRepresentation: key) as! T
             default:
                 throw CoseError.invalidCurve("Invalid curve for key agreement: \(curve)")
         }
@@ -474,17 +474,17 @@ public func deriveSigningPrivateKey<T>(from key: Data, curve: CurveType) throws 
     do {
         switch curve {
             case .SECP256K1:
-                return try! P256K.Signing.PrivateKey(dataRepresentation: key) as! T
+                return try P256K.Signing.PrivateKey(dataRepresentation: key) as! T
             case .SECP256R1:
-                return try! P256.Signing.PrivateKey(rawRepresentation: key) as! T
+                return try P256.Signing.PrivateKey(rawRepresentation: key) as! T
             case .SECP384R1:
-                return try! P384.Signing.PrivateKey(rawRepresentation: key) as! T
+                return try P384.Signing.PrivateKey(rawRepresentation: key) as! T
             case .SECP521R1:
-                return try! P521.Signing.PrivateKey(rawRepresentation: key) as! T
+                return try P521.Signing.PrivateKey(rawRepresentation: key) as! T
             case .ED25519:
-                return try! Curve25519.Signing.PrivateKey(rawRepresentation: key) as! T
+                return try Curve25519.Signing.PrivateKey(rawRepresentation: key) as! T
             case .ED448:
-                return try! Curve448.Signing.PrivateKey(rawRepresentation: key) as! T
+                return try Curve448.Signing.PrivateKey(rawRepresentation: key) as! T
             default:
                 throw CoseError.invalidCurve("Invalid curve for key agreement: \(curve)")
         }

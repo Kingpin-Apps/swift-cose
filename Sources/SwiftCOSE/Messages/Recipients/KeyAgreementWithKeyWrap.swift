@@ -32,8 +32,8 @@ public class KeyAgreementWithKeyWrap: CoseRecipient {
             keyAgreementWithKeyWrapMsg.context = ctx
         }
         
-        // Check for zero-length payload
-        guard let payload = keyAgreementWithKeyWrapMsg.payload, payload.isEmpty else {
+        // The wrapped CEK travels in the ciphertext slot.
+        guard let payload = keyAgreementWithKeyWrapMsg.payload, !payload.isEmpty else {
             throw CoseError.malformedMessage("Recipient class KEY_AGREEMENT_WITH_KEY_WRAP must carry the encrypted CEK in its payload.")
         }
         
@@ -75,7 +75,10 @@ public class KeyAgreementWithKeyWrap: CoseRecipient {
             throw CoseError.invalidAlgorithm("The algorithm parameter should be included in either the protected header or unprotected header.")
         }
         
-        let encrypted = try encrypt(targetAlgorithm: alg.keyWrapFunction as! EncAlgorithm)
+        guard let wrapAlgorithm = alg.keyWrapFunction as? EncAlgorithm else {
+            throw CoseError.invalidAlgorithm("Algorithm \(alg) has no AES key wrap function.")
+        }
+        let encrypted = try encrypt(targetAlgorithm: wrapAlgorithm)
         var recipient: [CBOR] = [
             CBOR.byteString(phdrEncoded),
             CBOR.fromAny(uhdrEncoded),
@@ -94,10 +97,11 @@ public class KeyAgreementWithKeyWrap: CoseRecipient {
     
     // MARK: - Key Management
     private func computeKEK(targetAlgorithm: EncAlgorithm, peerKey: EC2Key, localKey: EC2Key, kexAlgorithm: EcdhHkdfAlgorithm) throws -> Data {
+        // ECDH uses our private key with the peer's public key.
         return try kexAlgorithm.deriveKEK(
             curve: localKey.curve,
-            privateKey: peerKey,
-            publicKey: localKey,
+            privateKey: localKey,
+            publicKey: peerKey,
             context: getKDFContext(algorithm: targetAlgorithm)
         )
         
@@ -126,15 +130,21 @@ public class KeyAgreementWithKeyWrap: CoseRecipient {
             }
         }
         
+        guard let localKey = key as? EC2Key else {
+            throw CoseError.invalidKey("The sender key must be an EC2 key.")
+        }
+        guard let wrapFunc = alg.keyWrapFunction as? AesKwAlgorithm else {
+            throw CoseError.invalidAlgorithm("Algorithm \(alg) has no AES key wrap function.")
+        }
+        
         let keyBytes = try computeKEK(
-            targetAlgorithm: alg.keyWrapFunction as! EncAlgorithm,
+            targetAlgorithm: wrapFunc,
             peerKey: peerKey,
-            localKey: key as! EC2Key,
+            localKey: localKey,
             kexAlgorithm: alg
         )
-        let wrapFunc = alg.keyWrapFunction as? AesKwAlgorithm
         
-        return try wrapFunc!.keyWrap(
+        return try wrapFunc.keyWrap(
             kek: CoseSymmetricKey(
                 k: keyBytes,
                 optionalParams: [
@@ -172,11 +182,18 @@ public class KeyAgreementWithKeyWrap: CoseRecipient {
         
         let keyOps = [DecryptOp(), UnwrapOp()]
         
+        guard let peerEC2Key = peerKey as? EC2Key, let localKey = key as? EC2Key else {
+            throw CoseError.invalidKey("Key agreement needs EC2 keys on both sides.")
+        }
+        guard let unwrapFunc = alg.keyWrapFunction as? AesKwAlgorithm else {
+            throw CoseError.invalidAlgorithm("Algorithm \(alg) has no AES key wrap function.")
+        }
+        
         let kek = try CoseSymmetricKey(
             k: try computeKEK(
-                targetAlgorithm: alg.keyWrapFunction as! EncAlgorithm,
-                peerKey: peerKey as! EC2Key,
-                localKey: key as! EC2Key,
+                targetAlgorithm: unwrapFunc,
+                peerKey: peerEC2Key,
+                localKey: localKey,
                 kexAlgorithm: alg
             ),
             optionalParams: [
@@ -190,7 +207,7 @@ public class KeyAgreementWithKeyWrap: CoseRecipient {
             algorithm: alg,
             keyOps: keyOps
         )
-        return try (alg.keyWrapFunction as! AesKwAlgorithm).keyUnwrap(
+        return try unwrapFunc.keyUnwrap(
             kek: kek,
             data: payload!
         )

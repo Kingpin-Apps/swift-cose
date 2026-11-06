@@ -151,9 +151,12 @@ public class EC2Key: CoseKey {
         
         self.curve = curve
         
-        if d != nil {
+        var finalX = x
+        var finalY = y
+        
+        if let d {
             // Derive public key (x, y) from private key `d`
-            let (publicKeyX, publicKeyY) = try deriveKeyAgreementPublicNumbers(from: d!, curve: curve.curveType!)
+            let (publicKeyX, publicKeyY) = try deriveKeyAgreementPublicNumbers(from: d, curve: curve.curveType!)
             
             if let x = x, publicKeyX != x {
                 throw CoseError.invalidKey("Public X does not match derived X")
@@ -161,23 +164,26 @@ public class EC2Key: CoseKey {
             if let y = y, publicKeyY != y {
                 throw CoseError.invalidKey("Public Y does not match derived Y")
             }
+            finalX = finalX ?? publicKeyX
+            finalY = finalY ?? publicKeyY
         }
         
-        if x != nil && y == nil {
+        if let x = finalX, finalY == nil {
             // Attempt to derive Y from X
             let publicKeyData = Data(
                 [0x03]
-            ) + x! // don't care which of the two possible Y values we get
+            ) + x // don't care which of the two possible Y values we get
             let (_, publicKeyY) = try deriveKeyAgreementPublicNumbersCompact(
                 from: publicKeyData,
                 curve: curve.curveType!
             )
-            self.y = publicKeyY!
+            finalY = publicKeyY
         }
         
-        self.x = x!
-        self.y = y!
-        self.d = d!
+        // A public key has no `d`; only set the components we have.
+        if let finalX { self.x = finalX }
+        if let finalY { self.y = finalY }
+        if let d { self.d = d }
     }
 
     // MARK: - Methods
@@ -198,11 +204,18 @@ public class EC2Key: CoseKey {
         CoseKey.removeFromDict(&optionalParams, parameter: EC2KpD())
         CoseKey.removeFromDict(&optionalParams, parameter: EC2KpCurve())
         
+        // extractFromDict defaults a missing component to empty bytes;
+        // treat that as absent so public-only keys load.
+        func component(_ value: Any) -> Data? {
+            guard let data = value as? Data, !data.isEmpty else { return nil }
+            return data
+        }
+        
         return try EC2Key(
             curve: curve,
-            x: x as? Data,
-            y: y as? Data,
-            d: d as? Data,
+            x: component(x),
+            y: component(y),
+            d: component(d),
             optionalParams: optionalParams
         )
     }

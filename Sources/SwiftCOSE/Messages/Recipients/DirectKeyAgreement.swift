@@ -135,27 +135,38 @@ public class DirectKeyAgreement: CoseRecipient {
         let supportedAlgorithms: [CoseAlgorithmIdentifier] = [
             .ecdhES_HKDF_256,
             .ecdhES_HKDF_512,
-            .ecdhSS_HKDF_512,
+            .ecdhSS_HKDF_256,
             .ecdhSS_HKDF_512
         ]
 
-        let peerKey: EC2Key
+        let peerKeyValue: Any?
         if supportedAlgorithms.contains(algId) {
             if ops == "encrypt" {
-                peerKey = localAttrs[StaticKey()] as! EC2Key
+                peerKeyValue = localAttrs[StaticKey()]
             } else {
                 let algs: [CoseAlgorithmIdentifier] = [
-                    .ecdhSS_HKDF_512,
+                    .ecdhSS_HKDF_256,
                     .ecdhSS_HKDF_512
                 ]
                 if algs.contains(algId) {
-                    peerKey = try getAttr(StaticKey()) as! EC2Key
+                    peerKeyValue = try getAttr(StaticKey())
                 } else {
-                    peerKey = try getAttr(EphemeralKey()) as! EC2Key
+                    peerKeyValue = try getAttr(EphemeralKey())
                 }
             }
         } else {
             throw CoseError.invalidAlgorithm("Algorithm \(alg) unsupported for \(type(of: self)).")
+        }
+        guard let peerKey = peerKeyValue as? EC2Key else {
+            throw CoseError.invalidKey("The peer key must be an EC2 key.")
+        }
+        // ECDH-ES: the sender makes a fresh ephemeral key when none is set.
+        let ephemeralAlgorithms: [CoseAlgorithmIdentifier] = [.ecdhES_HKDF_256, .ecdhES_HKDF_512]
+        if ops == "encrypt" && key == nil && ephemeralAlgorithms.contains(algId) {
+            try setupEphemeralKey(peerKey: peerKey)
+        }
+        guard let localKey = key as? EC2Key else {
+            throw CoseError.invalidKey("The recipient key must be an EC2 key.")
         }
 
         try peerKey.verify(
@@ -163,7 +174,7 @@ public class DirectKeyAgreement: CoseRecipient {
             algorithm: alg,
             keyOps: [DeriveKeyOp(), DeriveBitsOp()]
         )
-        try key?.verify(
+        try localKey.verify(
             keyType: EC2Key.self,
             algorithm: alg,
             keyOps: [DeriveKeyOp(), DeriveBitsOp()]
@@ -173,7 +184,7 @@ public class DirectKeyAgreement: CoseRecipient {
             k: try computeKEK(
                 targetAlgorithm: targetAlgorithm,
                 peerKey: peerKey,
-                localKey: key as! EC2Key,
+                localKey: localKey,
                 kexAlg: alg
             ),
             optionalParams: [KpAlg(): targetAlgorithm]

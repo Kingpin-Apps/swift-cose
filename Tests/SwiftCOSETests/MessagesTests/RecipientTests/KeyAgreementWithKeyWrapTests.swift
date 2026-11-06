@@ -30,20 +30,34 @@ struct KeyAgreementWithKeyWrapTests {
     // MARK: - Test fromCoseObject
     
     @Test func testFromCoseObject() async throws {
+        // This recipient class carries the wrapped CEK in its ciphertext.
+        let wrappedCEK = Data(repeating: 0xAB, count: 24)
         let coseArray: [CBOR] = [
             CBOR.byteString(Data()),  // Zero-length protected header
             CBOR.map([
                 CBOR.simple(1): CBOR(Direct().identifier!) // Algorithm
             ]),
-            CBOR.byteString(Data())  // Zero-length ciphertext
+            CBOR.byteString(wrappedCEK)
         ]
         
         let recipient = try KeyAgreementWithKeyWrap.fromCoseObject(coseObj: coseArray, context: "testContext")
         
         #expect(recipient.context == "testContext")
-        #expect(recipient.payload!.isEmpty)
+        #expect(recipient.payload == wrappedCEK)
         #expect(recipient.phdr.isEmpty)
         #expect(recipient.uhdr[Algorithm()] as? CoseAlgorithm == Direct())
+    }
+    
+    @Test func testFromCoseObjectRejectsEmptyCiphertext() async throws {
+        let coseArray: [CBOR] = [
+            CBOR.byteString(Data()),
+            CBOR.map([CBOR.simple(1): CBOR(Direct().identifier!)]),
+            CBOR.byteString(Data())  // Zero-length ciphertext
+        ]
+        
+        #expect(throws: CoseError.self) {
+            _ = try KeyAgreementWithKeyWrap.fromCoseObject(coseObj: coseArray, context: "Enc_Recipient")
+        }
     }
     
     // MARK: - Test CEK Computation (Encrypt)
