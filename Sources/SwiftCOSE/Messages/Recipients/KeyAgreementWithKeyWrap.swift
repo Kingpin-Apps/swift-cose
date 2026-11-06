@@ -79,6 +79,11 @@ public class KeyAgreementWithKeyWrap: CoseRecipient {
         }
         
         let encrypted = try wrapCEK()
+        let staticAlgorithms: [CoseAlgorithmIdentifier] = [.ecdhSS_A128KW, .ecdhSS_A192KW, .ecdhSS_A256KW]
+        if staticAlgorithms.contains(try CoseAlgorithmIdentifier.fromCoseAlgorithm(alg)) {
+            // ECDH-SS: tell the receiver which static key we used.
+            try includeStaticSenderKey()
+        }
         var recipient: [CBOR] = [
             CBOR.byteString(phdrEncoded),
             CBOR.fromAny(uhdrEncoded),
@@ -185,12 +190,12 @@ public class KeyAgreementWithKeyWrap: CoseRecipient {
         
         let peerKey: CoseKey
         if needsEphemeralKey.contains(algId) {
-            guard let ephermalKey = try getAttr(EphemeralKey()) as? CoseKey else {
+            guard let ephermalKey = (try? getAttr(EphemeralKey())) as? CoseKey else {
                 throw CoseError.invalidMessage("Ephemeral key is required.")
             }
             peerKey = ephermalKey
         } else if needsStaticKey.contains(algId) {
-            guard let staticKey = try getAttr(StaticKey()) as? CoseKey else {
+            guard let staticKey = peerStaticKey() else {
                 throw CoseError.invalidMessage("Static key is required.")
             }
             peerKey = staticKey

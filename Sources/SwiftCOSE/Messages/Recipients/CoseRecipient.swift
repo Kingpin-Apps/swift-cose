@@ -92,7 +92,29 @@ public class CoseRecipient: CoseMessage {
     public func decrypt(targetAlgorithm: CoseAlgorithm) throws -> CoseKey {
         throw CoseError.unsupportedRecipient("\(type(of: self)) cannot decrypt a key.")
     }
-
+    
+    /// The peer's static key: from the message headers when present,
+    /// otherwise from `localAttrs` (for example when the message only
+    /// carries the key's ID).
+    func peerStaticKey() -> EC2Key? {
+        if let key = (try? getAttr(StaticKey())) as? EC2Key {
+            return key
+        }
+        return localAttrs[StaticKey()] as? EC2Key
+    }
+    
+    /// For static-static key agreement, adds the sender's public key to the
+    /// unprotected header unless the message already identifies it.
+    func includeStaticSenderKey() throws {
+        guard (try? getAttr(StaticKey())) == nil, (try? getAttr(StaticKeyID())) == nil else {
+            return
+        }
+        guard let sender = key as? EC2Key else {
+            throw CoseError.invalidKey("Static sender key cannot be nil.")
+        }
+        let publicKey = try EC2Key(curve: sender.curve, x: sender.x, y: sender.y)
+        uhdrUpdate([StaticKey(): publicKey])
+    }
     
     // MARK: - Initialization
     /// Create a COSE Recipient message.

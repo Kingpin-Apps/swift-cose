@@ -76,6 +76,28 @@ struct RecipientKeyManagementTests {
         #expect(try decoded.verifyTag(recipient: recipient))
     }
 
+    // MARK: - ECDH static-static known answers
+
+    /// ecdh-direct-examples/p256-ss-hkdf-256-03.json: HS512 with an ECDH-SS recipient.
+    @Test func testMacEcdhStaticStaticExample() async throws {
+        let published = Data(hex: "D8618543A10107A054546869732069732074686520636F6E74656E742E5840D0DFD9778CCAA9D7ABEB317FCA2316BB0480DEA2B436B171639693DA334DCCA476A0FF8CD5556DA61E415F4B182F305103375E25C7C9650E917C6CD1E1E5F321818344A101381AA321A42001215820EDCBD809C754DB6582C16D6D65747C8AECC92D619C778EB17F13B55C9B3E48F52258200F38495E0CFD448E93B1E366C047CBA0D567B3C526BCE36C3F3403A29D9D2A8A01020458246D65726961646F632E6272616E64796275636B406275636B6C616E642E6578616D706C6535584002D1F7E6F26C43D4868D87CEB2353161740AACF1F7163647984B522A848DF1C3C9CF4DF2FE6C632BF7886413F76E8852271942C33FFD7A1BF85EBE223D0E672B40")
+        let decoded = try CoseMessage.decode(MacMessage.self, from: published)
+        let recipient = try #require(decoded.recipients.first as? DirectKeyAgreement)
+        recipient.key = try Self.receiverKey()
+        #expect(try decoded.verifyTag(recipient: recipient))
+    }
+
+    /// ecdh-direct-examples/p256-ss-hkdf-256-01.json: A128GCM with an ECDH-SS recipient.
+    @Test func testEncryptEcdhStaticStaticExample() async throws {
+        let published = Data(hex: "D8608443A10101A1054CD7923E677B71A3F40A179643582455DE918D6CA1E33BEDE48DB6E48678A8159214E76B2099E74AA52F250B940D13C4E7AB78818344A101381AA321A42001215820EDCBD809C754DB6582C16D6D65747C8AECC92D619C778EB17F13B55C9B3E48F52258200F38495E0CFD448E93B1E366C047CBA0D567B3C526BCE36C3F3403A29D9D2A8A01020458246D65726961646F632E6272616E64796275636B406275636B6C616E642E6578616D706C6535584002D1F7E6F26C43D4868D87CEB2353161740AACF1F7163647984B522A848DF1C3C9CF4DF2FE6C632BF7886413F76E88523A8260B857D70B350027FD842B5E594740")
+        let decoded = try CoseMessage.decode(EncMessage.self, from: published)
+        let recipient = try #require(decoded.recipients.first as? DirectKeyAgreement)
+        recipient.key = try Self.receiverKey()
+        let cek = try #require(try recipient.computeCEK(targetAlgorithm: A128GCM(), ops: "decrypt"))
+        #expect(cek.k == Data(hex: "A6C2365CBC7672FBB5DB614B9A223AE3"))
+        #expect(try decoded.decrypt(recipient: recipient) == Self.plaintext)
+    }
+
     // MARK: - COSE_Mac round trips
 
     @Test func testMacKeyWrapRoundTrip() async throws {
@@ -101,8 +123,12 @@ struct RecipientKeyManagementTests {
     @Test("COSE_Mac with ECDH recipients round-trips", arguments: [
         CoseAlgorithmIdentifier.ecdhES_HKDF_256,
         .ecdhES_HKDF_512,
+        .ecdhSS_HKDF_256,
+        .ecdhSS_HKDF_512,
         .ecdhES_A128KW,
         .ecdhES_A256KW,
+        .ecdhSS_A128KW,
+        .ecdhSS_A256KW,
     ])
     func testMacEcdhRoundTrip(_ id: CoseAlgorithmIdentifier) async throws {
         let receiver = try EC2Key.generateKey(curve: P256Curve())
@@ -122,6 +148,32 @@ struct RecipientKeyManagementTests {
     }
 
     // MARK: - COSE_Encrypt round trips
+
+    @Test("COSE_Encrypt with ECDH-SS recipients round-trips", arguments: [
+        CoseAlgorithmIdentifier.ecdhSS_HKDF_256,
+        .ecdhSS_HKDF_512,
+        .ecdhSS_A128KW,
+        .ecdhSS_A192KW,
+    ])
+    func testEncEcdhStaticStaticRoundTrip(_ id: CoseAlgorithmIdentifier) async throws {
+        let receiver = try EC2Key.generateKey(curve: P256Curve())
+        let recipient = try Self.ecdhRecipient(id, receiver: receiver)
+
+        let msg = EncMessage(
+            phdr: [Algorithm(): A128GCM()],
+            uhdr: [IV(): Data.randomBytes(count: 12)],
+            payload: Self.plaintext,
+            recipients: [recipient]
+        )
+        let encoded = try msg.encode()
+
+        let decoded = try CoseMessage.decode(EncMessage.self, from: encoded)
+        let decodedRecipient = try #require(decoded.recipients.first)
+        // The sender's static public key travels in the header.
+        #expect((try? decodedRecipient.getAttr(StaticKey())) is EC2Key)
+        decodedRecipient.key = receiver
+        #expect(try decoded.decrypt(recipient: decodedRecipient) == Self.plaintext)
+    }
 
     // MARK: - Helpers
 

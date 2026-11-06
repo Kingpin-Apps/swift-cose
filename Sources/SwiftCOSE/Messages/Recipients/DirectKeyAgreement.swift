@@ -90,6 +90,10 @@ public class DirectKeyAgreement: CoseRecipient {
                 throw CoseError.invalidKey("Static sender key cannot be nil.")
             }
         }
+        if !needsEphemeralKey.contains(algId) {
+            // ECDH-SS: tell the receiver which static key we used.
+            try includeStaticSenderKey()
+        }
         
         if !recipients.isEmpty {
             throw CoseError.malformedMessage("Recipient class \(type(of: self)) must carry at least one recipient.")
@@ -97,7 +101,7 @@ public class DirectKeyAgreement: CoseRecipient {
         
         // only the ephemeral sender key MUST be included in the header,
         // for the static sender it is recommended by not obligated
-        let ephermalKey = try getAttr(EphemeralKey())
+        let ephermalKey = try? getAttr(EphemeralKey())
         if needsEphemeralKey.contains(algId) && ephermalKey == nil {
             throw CoseError.malformedMessage("Recipient class \(type(of: self))  must carry an ephemeral COSE key object.")
         }
@@ -158,7 +162,7 @@ public class DirectKeyAgreement: CoseRecipient {
                     .ecdhSS_HKDF_512
                 ]
                 if algs.contains(algId) {
-                    peerKeyValue = try getAttr(StaticKey())
+                    peerKeyValue = peerStaticKey()
                 } else {
                     peerKeyValue = try getAttr(EphemeralKey())
                 }
