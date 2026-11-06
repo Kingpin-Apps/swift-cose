@@ -53,8 +53,15 @@ extension Data {
         return self.map { String(format: "%02x", $0) }.joined()
     }
     
+    /// Parses these bytes as one CBOR data item.
+    ///
+    /// Only use this on bytes that already hold CBOR. To put raw bytes (a
+    /// payload, a signature or an encoded header) into a message, wrap them
+    /// with `CBOR.byteString(_:)` instead.
     var toCBOR: CBOR {
-        return try! CBORSerialization.cbor(from: self)
+        get throws {
+            return try CBORSerialization.cbor(from: self)
+        }
     }
     
     func toInt() -> Int {
