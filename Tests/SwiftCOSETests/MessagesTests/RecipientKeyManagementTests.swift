@@ -175,6 +175,22 @@ struct RecipientKeyManagementTests {
         #expect(try decoded.decrypt(recipient: decodedRecipient) == Self.plaintext)
     }
 
+    @Test func testEncRsaOaepKeyWrapRoundTrip() async throws {
+        let rsaKey = try RSAKey.generateKey(keyBits: 2048)
+        let msg = EncMessage(
+            phdr: [Algorithm(): A256GCM()],
+            uhdr: [IV(): Data.randomBytes(count: 12)],
+            payload: Self.plaintext,
+            recipients: [KeyWrap(uhdr: [Algorithm(): RsaesOaepSha256()], key: rsaKey)]
+        )
+        let encoded = try msg.encode()
+
+        let decoded = try CoseMessage.decode(EncMessage.self, from: encoded)
+        let recipient = try #require(decoded.recipients.first as? KeyWrap)
+        recipient.key = rsaKey
+        #expect(try decoded.decrypt(recipient: recipient) == Self.plaintext)
+    }
+
     // MARK: - Helpers
 
     /// An ECDH recipient for `receiver`. Static-static algorithms get a
