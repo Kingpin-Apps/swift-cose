@@ -73,4 +73,19 @@ struct AesMacAlgorithmTests {
         
         #expect(!isValid, "Verification should fail for tampered data.")
     }
+    
+    /// COSE WG aes-wrap-examples/aes-wrap-128-01.json: the MAC_structure
+    /// (ToMac_hex) and CEK give the published AES-MAC-128/64 tag.
+    @Test func testAESMAC12864KnownAnswer() async throws {
+        let key = try CoseSymmetricKey(k: Data(hex: "DDDC08972DF9BE62855291A17A1B4CF7"))
+        let toMac = Data(hex: "84634D414343A1010E4054546869732069732074686520636F6E74656E742E")
+        let tag = try AESMAC12864().computeTag(key: key, data: toMac)
+        #expect(tag == Data(hex: "36F5AFAF0BAB5D43"))
+    }
+    
+    @Test func testAESMACTagLengths() async throws {
+        let key = try CoseSymmetricKey(k: Data(repeating: 1, count: 16))
+        #expect(try AESMAC12864().computeTag(key: key, data: Data([1, 2, 3])).count == 8)
+        #expect(try AESMAC128128().computeTag(key: key, data: Data(count: 32)).count == 16)
+    }
 }

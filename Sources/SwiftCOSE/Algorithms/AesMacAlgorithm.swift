@@ -17,33 +17,24 @@ public class AesMacAlgorithm: CoseAlgorithm {
         super.init(identifier: identifier, fullname: fullname)
     }
 
+    /// AES-CBC-MAC (RFC 9053, section 3.2): zero-pad the data to a whole
+    /// number of blocks, encrypt with AES-CBC and a zero IV, and keep the
+    /// first `digestLength` bytes of the last block.
     public func computeTag(key: CoseSymmetricKey, data: Data) throws -> Data {
         let blockSize = 16
         var paddedData = data
-
-        // Pad the data to a multiple of the block size
-        while paddedData.count % blockSize != 0 {
-            paddedData.append(0)
+        if paddedData.isEmpty || paddedData.count % blockSize != 0 {
+            paddedData.append(contentsOf: [UInt8](repeating: 0, count: blockSize - paddedData.count % blockSize))
         }
         
-        let cbc = CBC(iv: Data(repeating: 0, count: blockSize).toBytes)
-
-        let aes = try AES(
-            key: key.k.toBytes,
-            blockMode: cbc
-        )
-        var encryptor = try aes.makeEncryptor()
-        
         do {
-            var ciphertext = Array<UInt8>()
-            ciphertext += try encryptor.update(withBytes: data.toBytes)
-            ciphertext += try encryptor.finish()
-
-            if digestLength == 16 {
-                return Data(ciphertext.suffix(16))
-            } else {
-                return Data(ciphertext.dropLast(8).suffix(8))
-            }
+            let aes = try AES(
+                key: key.k.toBytes,
+                blockMode: CBC(iv: [UInt8](repeating: 0, count: blockSize)),
+                padding: .noPadding
+            )
+            let ciphertext = try aes.encrypt(paddedData.toBytes)
+            return Data(ciphertext.suffix(blockSize).prefix(digestLength))
         } catch {
             throw CoseError.genericError("Compute Tag failed: \(error.localizedDescription)")
         }
