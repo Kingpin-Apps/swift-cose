@@ -39,8 +39,7 @@ struct RsaAlgorithmTests {
     @Test("Test RSA encryption and decryption with OAEP", arguments: zip([
         CoseAlgorithmIdentifier.rsa_ES_OAEP_SHA1,
         .rsa_ES_OAEP_SHA256,
-        .rsa_ES_OAEP_SHA512
-    ], [2048, 2048, 3072]))
+    ], [2048, 3072]))
     func testRsaEncryptDecrypt(_ algId: CoseAlgorithmIdentifier, _ keyBits: Int) async throws {
         let plaintext = "Test RSA Encryption and Decryption".data(using: .utf8)!
         
@@ -100,5 +99,14 @@ struct RsaAlgorithmTests {
         expectSizeError { _ = try Ps256().verify(key: key, data: message, signature: Data(count: 128)) }
         expectSizeError { _ = try RsaesOaepSha1().keyWrap(key: key, data: Data(count: 16)) }
         expectSizeError { _ = try RsaesOaepSha1().keyUnwrap(key: key, data: Data(count: 128)) }
+    }
+    
+    @Test func testOaepSha512IsNotSilentlySha1() async throws {
+        // swift-crypto has no OAEP with SHA-512; refusing beats producing
+        // ciphertext other implementations read as a different algorithm.
+        let key = try RSAKey.generateKey(keyBits: 2048)
+        #expect(throws: CoseError.self) {
+            _ = try RsaesOaepSha512().keyWrap(key: key, data: Data(count: 16))
+        }
     }
 }

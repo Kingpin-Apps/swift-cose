@@ -149,6 +149,19 @@ public class RsaOaep: RsaAlgorithm {
         return .oaep
     }
 
+    /// RFC 8230, section 3: the OAEP hash (and MGF1 hash) follows the
+    /// algorithm. swift-crypto provides SHA-1 and SHA-256 only.
+    private func oaepPadding() throws -> _RSA.Encryption.Padding {
+        switch hashFunction {
+            case .sha1:
+                return .PKCS1_OAEP
+            case .sha256:
+                return .PKCS1_OAEP_SHA256
+            default:
+                throw CoseError.notImplemented("\(String(describing: fullname)) needs OAEP with \(hashFunction), which swift-crypto does not provide.")
+        }
+    }
+
     func keyWrap(key: RSAKey, data: Data) throws -> Data {
         let parts = try publicParts(of: key)
         let rsaPublicKey: _RSA.Encryption.PublicKey
@@ -163,7 +176,7 @@ public class RsaOaep: RsaAlgorithm {
                 return try rsaPublicKey
                     .encrypt(
                         data,
-                        padding: _RSA.Encryption.Padding.PKCS1_OAEP
+                        padding: try oaepPadding()
                     )
             default:
                 throw CoseError.valueError("Unsupported padding")
@@ -186,7 +199,7 @@ public class RsaOaep: RsaAlgorithm {
             case .oaep:
                 return try privateKey.decrypt(
                     data,
-                    padding: _RSA.Encryption.Padding.PKCS1_OAEP
+                    padding: try oaepPadding()
                 )
             default:
                 throw CoseError.valueError("Unsupported padding")
