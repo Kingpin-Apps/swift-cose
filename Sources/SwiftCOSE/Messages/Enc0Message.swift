@@ -57,15 +57,15 @@ public class Enc0Message: EncCommon {
         if encrypt {
             let encrypted = try self.encrypt()
             message = [
-                phdrEncoded.toCBOR,
+                CBOR.byteString(phdrEncoded),
                 CBOR.fromAny(uhdrEncoded),
                 CBOR.byteString(encrypted)
             ]
         } else {
             message = [
-                phdrEncoded.toCBOR,
+                CBOR.byteString(phdrEncoded),
                 CBOR.fromAny(uhdrEncoded),
-                payload?.toCBOR ?? CBOR.null
+                payload.map { CBOR.byteString($0) } ?? CBOR.null
             ]
         }
         

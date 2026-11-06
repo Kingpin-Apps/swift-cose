@@ -64,12 +64,12 @@ public class CoseSignature: SignCommon {
             guard let parentPayload = parent.payload else {
                 throw CoseError.invalidMessage("Missing payload and no detached payload provided")
             }
-            signStructure.append(CBOR.fromAny(parentPayload))
+            signStructure.append(CBOR.byteString(parentPayload))
         } else {
             guard parent.payload == nil || parent.payload == Data() else {
                 throw CoseError.invalidMessage("Detached payload must be None when payload is set")
             }
-            signStructure.append(CBOR.fromAny(detachedPayload!))
+            signStructure.append(CBOR.byteString(detachedPayload!))
         }
         
         return try CBORSerialization.data(from: .array(signStructure))
@@ -80,10 +80,11 @@ public class CoseSignature: SignCommon {
     /// - Returns: Encoded CBOR representation of the signature.
     public func encode(detachedPayload: Data? = nil) throws -> [CBOR] {
         let computedSignature = try self.computeSignature(detachedPayload: detachedPayload)
+        self.signature = computedSignature
         return [
-            phdrEncoded.toCBOR,
+            CBOR.byteString(phdrEncoded),
             CBOR.fromAny(uhdrEncoded),
-            CBOR.fromAny(computedSignature)
+            CBOR.byteString(computedSignature)
         ]
     }
     

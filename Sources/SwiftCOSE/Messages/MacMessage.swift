@@ -88,16 +88,16 @@ public class MacMessage: MacCommon {
         if mac {
             let computedTag = try self.computeTag()
             message = [
-                phdrEncoded.toCBOR,
+                CBOR.byteString(phdrEncoded),
                 CBOR.fromAny(uhdrEncoded),
-                payload?.toCBOR ?? CBOR.null,
+                payload.map { CBOR.byteString($0) } ?? CBOR.null,
                 CBOR.byteString(computedTag)
             ]
         } else {
             message = [
-                phdrEncoded.toCBOR,
+                CBOR.byteString(phdrEncoded),
                 CBOR.fromAny(uhdrEncoded),
-                payload?.toCBOR ?? CBOR.null]
+                payload.map { CBOR.byteString($0) } ?? CBOR.null]
         }
         
         if !self.recipients.isEmpty {

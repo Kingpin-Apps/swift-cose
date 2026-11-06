@@ -91,16 +91,20 @@ public class CoseSignMessage: CoseMessage {
     /// - Returns: The encoded message as Data.
     public func encode(tag: Bool = true, detachedPayload: Data? = nil) throws -> Data {
         var cborMessage: [CBOR] = []
-        cborMessage.append(phdrEncoded.toCBOR)
+        cborMessage.append(CBOR.byteString(phdrEncoded))
         cborMessage.append(CBOR.fromAny(uhdrEncoded))
-        cborMessage.append(payload?.toCBOR ?? CBOR.null)
-        
-        if !signers.isEmpty {
-            let encodedSigners = try signers.map {
-                CBOR.array(try $0.encode(detachedPayload: detachedPayload))
-            }
-            cborMessage.append(CBOR.array(encodedSigners))
+        // RFC 9052, section 2: a detached payload is sent as nil.
+        if detachedPayload != nil {
+            cborMessage.append(CBOR.null)
+        } else {
+            cborMessage.append(payload.map { CBOR.byteString($0) } ?? CBOR.null)
         }
+        
+        // COSE_Sign always carries the signers array as its fourth element.
+        let encodedSigners = try signers.map {
+            CBOR.array(try $0.encode(detachedPayload: detachedPayload))
+        }
+        cborMessage.append(CBOR.array(encodedSigners))
         
         if tag {
             return try CBORSerialization.data(

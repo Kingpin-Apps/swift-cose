@@ -116,12 +116,12 @@ public class Sign1Message: SignCommon {
                     CoseError
                     .valueError("Missing payload and no detached payload provided.")
             }
-            sigStructure.append(CBOR(payload))
+            sigStructure.append(CBOR.byteString(payload))
         } else {
-            guard self.payload != nil else {
+            guard self.payload == nil || self.payload == Data() else {
                 throw CoseError.valueError("Detached payload must be None when payload is set.")
             }
-            sigStructure.append(detachedPayload!.toCBOR)
+            sigStructure.append(CBOR.byteString(detachedPayload!))
         }
 
         return try CBORSerialization.data(from: .array(sigStructure))
