@@ -63,27 +63,31 @@ public class Sign1Message: SignCommon {
         -> Data
     {
         var cborMessage: [CBOR]
+        // RFC 9052, section 2: a detached payload is sent as nil.
+        let payloadItem: CBOR = detachedPayload != nil
+            ? CBOR.null
+            : (payload.map { CBOR.byteString($0) } ?? CBOR.null)
 
         if sign {
             let computedSignature = try self.computeSignature(detachedPayload: detachedPayload)
             cborMessage = [
                 CBOR.byteString(phdrEncoded),
                 CBOR.fromAny(uhdrEncoded),
-                CBOR.byteString(payload ?? Data()),
+                payloadItem,
                 CBOR.byteString(computedSignature),
             ]
         } else if !signature.isEmpty {
             cborMessage = [
                 CBOR.byteString(phdrEncoded),
                 CBOR.fromAny(uhdrEncoded),
-                CBOR.byteString(payload ?? Data()),
+                payloadItem,
                 CBOR.byteString(signature),
             ]
         } else {
             cborMessage = [
                 CBOR.byteString(phdrEncoded),
                 CBOR.fromAny(uhdrEncoded),
-                CBOR.byteString(payload ?? Data()),
+                payloadItem,
             ]
         }
 

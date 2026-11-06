@@ -147,13 +147,29 @@ struct Sign1MessageTests {
     // MARK: - Signature Structure Tests
 
     @Test func testSignatureStructure() async throws {
-        let sign1Message = Sign1Message(
-            payload: Data("Signature Test".utf8)
-        )
+        // A detached payload is only valid when the message carries none.
+        let sign1Message = Sign1Message()
         
         let detachedPayload = Data("Detached Payload".utf8)
         let structure = try sign1Message.createSignatureStructure(detachedPayload: detachedPayload)
         
         #expect(!structure.isEmpty, "Signature structure should not be empty.")
+        #expect(
+            try CBORSerialization.cbor(from: structure).arrayValue?.last
+                == CBOR.byteString(detachedPayload),
+            "The detached payload is signed as a byte string."
+        )
+    }
+    
+    @Test func testSignatureStructureRejectsDetachedPayloadWhenPayloadSet() async throws {
+        let sign1Message = Sign1Message(
+            payload: Data("Signature Test".utf8)
+        )
+        
+        #expect(throws: CoseError.self) {
+            _ = try sign1Message.createSignatureStructure(
+                detachedPayload: Data("Detached Payload".utf8)
+            )
+        }
     }
 }
