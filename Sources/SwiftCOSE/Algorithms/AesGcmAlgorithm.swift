@@ -8,9 +8,12 @@ public class AesGcmAlgorithm: EncAlgorithm  {
             additionalAuthenticatedData: aad?.toBytes,
             mode: .combined
         )
-        let aes = try! AES(
+        // GCM is a stream mode: no padding, or the ciphertext grows to a
+        // block multiple and no other COSE implementation can read it.
+        let aes = try AES(
             key: key.k.toBytes,
-            blockMode: gcm
+            blockMode: gcm,
+            padding: .noPadding
         )
         
         do {
@@ -27,9 +30,12 @@ public class AesGcmAlgorithm: EncAlgorithm  {
             additionalAuthenticatedData: aad?.toBytes,
             mode: .combined
         )
-        let aes = try! AES(
+        // GCM is a stream mode: no padding, or the ciphertext grows to a
+        // block multiple and no other COSE implementation can read it.
+        let aes = try AES(
             key: key.k.toBytes,
-            blockMode: gcm
+            blockMode: gcm,
+            padding: .noPadding
         )
         
         do {
