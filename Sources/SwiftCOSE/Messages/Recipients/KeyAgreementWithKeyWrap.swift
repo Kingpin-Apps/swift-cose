@@ -50,25 +50,23 @@ public class KeyAgreementWithKeyWrap: CoseRecipient {
     }
     
     public override func computeCEK(targetAlgorithm: EncAlgorithm, ops: String) throws -> CoseSymmetricKey? {
+        return try deriveCEK(targetAlgorithm: targetAlgorithm, ops: ops)
+    }
+    
+    override func deriveCEK(targetAlgorithm: CoseAlgorithm, ops: String) throws -> CoseSymmetricKey? {
+        let keyOps = contentKeyOps(for: targetAlgorithm, ops: ops)
         if ops == "encrypt" {
-            if payload!.isEmpty {
+            guard let payload, !payload.isEmpty else {
                 return nil
-            } else {
-                return try CoseSymmetricKey(
-                    k: payload!,
-                    optionalParams: [
-                        KpAlg(): targetAlgorithm,
-                        KpKeyOps(): [EncryptOp()]
-                    ]
-                )
             }
+            return try CoseSymmetricKey(
+                k: payload,
+                optionalParams: [KpAlg(): targetAlgorithm, KpKeyOps(): keyOps]
+            )
         } else {
             return try CoseSymmetricKey(
-                k: decrypt(targetAlgorithm: targetAlgorithm),
-                optionalParams: [
-                    KpAlg(): targetAlgorithm,
-                    KpKeyOps(): [DecryptOp()]
-                ]
+                k: unwrapCEK(),
+                optionalParams: [KpAlg(): targetAlgorithm, KpKeyOps(): keyOps]
             )
         }
     }
@@ -80,10 +78,7 @@ public class KeyAgreementWithKeyWrap: CoseRecipient {
             throw CoseError.invalidAlgorithm("The algorithm parameter should be included in either the protected header or unprotected header.")
         }
         
-        guard let wrapAlgorithm = alg.keyWrapFunction as? EncAlgorithm else {
-            throw CoseError.invalidAlgorithm("Algorithm \(alg) has no AES key wrap function.")
-        }
-        let encrypted = try encrypt(targetAlgorithm: wrapAlgorithm)
+        let encrypted = try wrapCEK()
         var recipient: [CBOR] = [
             CBOR.byteString(phdrEncoded),
             CBOR.fromAny(uhdrEncoded),
@@ -113,6 +108,16 @@ public class KeyAgreementWithKeyWrap: CoseRecipient {
     }
     
     public func encrypt(targetAlgorithm: EncAlgorithm) throws -> Data {
+        return try wrapCEK()
+    }
+    
+    /// Wraps the CEK in `payload` with the agreed KEK. The KEK depends only
+    /// on this recipient's own algorithm, so this works for any content
+    /// algorithm, COSE_Mac included.
+    func wrapCEK() throws -> Data {
+        guard let payload else {
+            throw CoseError.valueError("No CEK to wrap")
+        }
         guard let alg = try getAttr(Algorithm()) as? EcdhHkdfAlgorithm else {
             throw CoseError.invalidAlgorithm("The algorithm parameter should at least be included in the unprotected header.")
         }
@@ -156,11 +161,19 @@ public class KeyAgreementWithKeyWrap: CoseRecipient {
                     KpAlg(): alg,
                     KpKeyOps(): [DeriveKeyOp()]
                 ]),
-            data: payload!
+            data: payload
         )
     }
     
     public func decrypt(targetAlgorithm: EncAlgorithm) throws -> Data {
+        return try unwrapCEK()
+    }
+    
+    /// Unwraps the CEK carried in `payload` with the agreed KEK.
+    func unwrapCEK() throws -> Data {
+        guard let payload else {
+            throw CoseError.valueError("No wrapped CEK to unwrap")
+        }
         guard let alg = try getAttr(Algorithm()) as? EcdhHkdfAlgorithm else {
             throw CoseError.invalidAlgorithm("The algorithm parameter should at least be included in the unprotected header.")
         }
@@ -214,7 +227,7 @@ public class KeyAgreementWithKeyWrap: CoseRecipient {
         )
         return try unwrapFunc.keyUnwrap(
             kek: kek,
-            data: payload!
+            data: payload
         )
     }
     

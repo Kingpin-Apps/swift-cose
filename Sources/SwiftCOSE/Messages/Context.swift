@@ -26,13 +26,13 @@ public struct SuppPubInfo {
     var other: Data = Data()
     
     /// The length of the derived key in bytes.
-    /// Set the length of the derived key. Must be of length 16, 24 or 32 bytes.
+    /// Set the length of the derived key. Must be 16, 24 or 32 bytes (AES), or 48 or 64 bytes (HMAC).
     var keyDataLength: Int  {
         get {
             return _keyDataLength
         }
         set {
-            guard [16, 24, 32].contains(newValue) else {
+            guard [16, 24, 32, 48, 64].contains(newValue) else {
                 fatalError("Not a valid key length: \(newValue)")
             }
             _keyDataLength = newValue
@@ -40,7 +40,7 @@ public struct SuppPubInfo {
     }
 
     init(keyDataLength: Int, protected: OrderedDictionary<CoseHeaderAttribute, Any> = [:], protectedEncoded: Data? = nil, other: Data = Data()) throws {
-        guard [16, 24, 32].contains(keyDataLength) else {
+        guard [16, 24, 32, 48, 64].contains(keyDataLength) else {
             throw CoseError.valueError("Not a valid key length: \(keyDataLength)")
         }
         self._keyDataLength = keyDataLength
@@ -77,7 +77,7 @@ public struct SuppPubInfo {
 }
 
 public struct CoseKDFContext {
-    var algorithm: EncAlgorithm
+    var algorithm: CoseAlgorithm
     var suppPubInfo: SuppPubInfo
     var partyUInfo: PartyInfo = PartyInfo()
     var partyVInfo: PartyInfo = PartyInfo()

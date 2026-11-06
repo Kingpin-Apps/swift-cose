@@ -119,7 +119,7 @@ public class DirectKeyAgreement: CoseRecipient {
     }
     
     // Compute KEK logic
-    private func computeKEK(targetAlgorithm: EncAlgorithm, peerKey: EC2Key, localKey: EC2Key, kexAlg: EcdhHkdfAlgorithm) throws -> Data {
+    private func computeKEK(targetAlgorithm: CoseAlgorithm, peerKey: EC2Key, localKey: EC2Key, kexAlg: EcdhHkdfAlgorithm) throws -> Data {
         return try kexAlg
             .deriveKEK(
                 curve: peerKey.curve,
@@ -131,6 +131,10 @@ public class DirectKeyAgreement: CoseRecipient {
 
     // Compute CEK logic
     public override func computeCEK(targetAlgorithm: EncAlgorithm, ops: String) throws -> CoseSymmetricKey? {
+        return try deriveCEK(targetAlgorithm: targetAlgorithm, ops: ops)
+    }
+    
+    override func deriveCEK(targetAlgorithm: CoseAlgorithm, ops: String) throws -> CoseSymmetricKey? {
         guard let alg = try getAttr(Algorithm()) as? EcdhHkdfAlgorithm else {
             throw CoseError.invalidAlgorithm("The algorithm parameter should be included in either the protected header or unprotected header.")
         }

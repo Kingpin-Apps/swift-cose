@@ -116,7 +116,7 @@ public class MacMessage: MacCommon {
     }
     
     public override func computeTag() throws -> Data {
-        guard let targetAlgorithm = try? getAttr(Algorithm()) as? CoseAlgorithm else {
+        guard let targetAlgorithm = (try? getAttr(Algorithm())) as? CoseAlgorithm else {
             throw CoseError.invalidAlgorithm("Algorithm not found in headers")
         }
 
@@ -125,40 +125,24 @@ public class MacMessage: MacCommon {
         if recipients.contains(where: { $0 is DirectEncryption }) {
             // Key should already be known
             return try super.computeTag()
-        }
-        
-        // The key agreement and key wrap recipients derive keys for an
-        // EncAlgorithm; MAC algorithms are not one, so only direct
-        // recipients can carry a COSE_Mac key for now.
-        guard let encAlgorithm = targetAlgorithm as? EncAlgorithm else {
-            throw CoseError.notImplemented(
-                "COSE_Mac with \(String(describing: targetAlgorithm.fullname)) supports only DIRECT_ENCRYPTION recipients."
-            )
-        }
-        
-        if recipients.contains(where: { $0 is DirectKeyAgreement }) {
+        } else if recipients.contains(where: { $0 is DirectKeyAgreement }) {
             self.key = try recipients.first?
-                .computeCEK(
-                    targetAlgorithm: encAlgorithm,
-                    ops: "encrypt"
-                )
+                .deriveCEK(targetAlgorithm: targetAlgorithm, ops: "encrypt")
             return try super.computeTag()
         } else if recipients.contains(where: { $0 is KeyWrap }) || recipients.contains(where: { $0 is KeyAgreementWithKeyWrap }) {
             // Generate random key bytes
-            var keyBytes = Data.randomBytes(count: encAlgorithm.keyLength!)
+            var keyBytes = Data.randomBytes(count: try contentKeyLength(for: targetAlgorithm))
             
             for recipient in recipients {
-                if recipient.payload?.isEmpty ?? true {
-                    recipient.payload = keyBytes
+                if let payload = recipient.payload, !payload.isEmpty {
+                    keyBytes = payload
                 } else {
-                    keyBytes = recipient.payload!
+                    recipient.payload = keyBytes
                 }
                 if let recipient = recipient as? KeyAgreementWithKeyWrap {
-                    let _ = try recipient.encrypt(targetAlgorithm: encAlgorithm)
+                    let _ = try recipient.wrapCEK()
                 } else if let recipient = recipient as? KeyWrap {
-                    let _ = try recipient.encrypt(
-                        targetAlgorithm: encAlgorithm
-                    )
+                    let _ = try recipient.wrapCEK(targetAlgorithm: targetAlgorithm)
                 } else {
                     throw CoseError.unsupportedRecipient("Unsupported COSE recipient class")
                 }
@@ -172,6 +156,34 @@ public class MacMessage: MacCommon {
                 ]
             )
             return try super.computeTag()
+        } else {
+            throw CoseError.unsupportedRecipient("Unsupported COSE recipient class")
+        }
+    }
+    
+    /// Verifies the tag of a received COSE_Mac with the key one recipient
+    /// carries.
+    ///
+    /// For a direct recipient, set ``CoseMessage/key`` to the shared MAC key
+    /// first. For key wrap and key agreement recipients, set the recipient's
+    /// own key (the KEK, or the receiver's private EC2 key); the MAC key is
+    /// recovered from the recipient.
+    /// - Parameter recipient: One of this message's ``recipients``.
+    /// - Returns: `true` if the tag is valid.
+    public func verifyTag(recipient: CoseRecipient) throws -> Bool {
+        guard let targetAlgorithm = (try? getAttr(Algorithm())) as? CoseAlgorithm else {
+            throw CoseError.invalidAlgorithm("Algorithm not found in headers")
+        }
+        guard CoseRecipient.hasRecipient(target: recipient, in: recipients) else {
+            throw CoseError.valueError("Recipient not found")
+        }
+        let _ = try CoseRecipient.verifyRecipients(recipients)
+        
+        if recipient is DirectEncryption {
+            return try verifyTag()
+        } else if recipient is DirectKeyAgreement || recipient is KeyWrap || recipient is KeyAgreementWithKeyWrap {
+            self.key = try recipient.deriveCEK(targetAlgorithm: targetAlgorithm, ops: "decrypt")
+            return try verifyTag()
         } else {
             throw CoseError.unsupportedRecipient("Unsupported COSE recipient class")
         }

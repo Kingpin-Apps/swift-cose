@@ -70,17 +70,29 @@ public class CoseRecipient: CoseMessage {
     
     /// Abstract method to compute CEK
     public func computeCEK(targetAlgorithm: EncAlgorithm, ops: String) throws -> CoseSymmetricKey? {
-        fatalError("This method must be implemented by subclasses.")
+        throw CoseError.unsupportedRecipient("\(type(of: self)) cannot compute a content key.")
+    }
+    
+    /// Computes the content key for any target algorithm: a content
+    /// encryption algorithm for COSE_Encrypt or a MAC algorithm for COSE_Mac.
+    /// The recipient classes that derive or wrap keys override this; the
+    /// public `computeCEK(targetAlgorithm:ops:)` forwards to it.
+    func deriveCEK(targetAlgorithm: CoseAlgorithm, ops: String) throws -> CoseSymmetricKey? {
+        guard let encAlgorithm = targetAlgorithm as? EncAlgorithm else {
+            throw CoseError.unsupportedRecipient("\(type(of: self)) cannot compute a key for \(String(describing: targetAlgorithm.fullname)).")
+        }
+        return try computeCEK(targetAlgorithm: encAlgorithm, ops: ops)
     }
     
     /// Encoding logic
     public func encode(targetAlgorithm: CoseAlgorithm? = nil) throws -> [CBOR] {
-        fatalError("This method must be implemented by subclasses.")
+        throw CoseError.unsupportedRecipient("\(type(of: self)) cannot be encoded.")
     }
     
     public func decrypt(targetAlgorithm: CoseAlgorithm) throws -> CoseKey {
-        fatalError("This method must be implemented by subclasses.")
+        throw CoseError.unsupportedRecipient("\(type(of: self)) cannot decrypt a key.")
     }
+
     
     // MARK: - Initialization
     /// Create a COSE Recipient message.
@@ -227,7 +239,7 @@ public class CoseRecipient: CoseMessage {
     /// Create a COSE KDF context for use by the key derivation algorithms.
     /// - Parameter algorithm: Specifies the target algorithm that will use the derived key.
     /// - Returns: A `CoseKDFContext` object.
-    func getKDFContext(algorithm: EncAlgorithm) throws -> CoseKDFContext {
+    func getKDFContext(algorithm: CoseAlgorithm) throws -> CoseKDFContext {
         
         // Extract PartyU information (each field is optional)
         let uID = (try? getAttr(PartyUID())) as? Data
@@ -242,9 +254,7 @@ public class CoseRecipient: CoseMessage {
         let partyV = PartyInfo(identity: vID, nonce: vNonce, other: vOther)
         
         // Create the SuppPubInfo over the recipient's encoded protected header
-        guard let keyLength = algorithm.keyLength else {
-            throw CoseError.invalidAlgorithm("The target algorithm has no key length.")
-        }
+        let keyLength = try contentKeyLength(for: algorithm)
         let suppPubOther = localAttrs[SuppPubOther()] as? Data ?? Data()
         let suppPub = try SuppPubInfo(
             keyDataLength: keyLength,
@@ -292,4 +302,38 @@ public class CoseRecipient: CoseMessage {
         )
         uhdrUpdate([EphemeralKey(): publicKey])
     }
+}
+
+// MARK: - Content keys for any target algorithm
+
+/// The length in bytes of the key a target algorithm uses.
+func contentKeyLength(for algorithm: CoseAlgorithm) throws -> Int {
+    switch algorithm {
+        case let alg as EncAlgorithm:
+            guard let keyLength = alg.keyLength else {
+                throw CoseError.invalidAlgorithm("The target algorithm has no key length.")
+            }
+            return keyLength
+        case let alg as AesMacAlgorithm:
+            return alg.keyLength
+        case let alg as HmacAlgorithm:
+            // RFC 9053, section 3.1: the key is the size of the hash output.
+            switch alg.hashFunction {
+                case .sha1: return 20
+                case .sha256: return 32
+                case .sha384: return 48
+                case .sha512: return 64
+            }
+        default:
+            throw CoseError.invalidAlgorithm("No key length for \(String(describing: algorithm.fullname)).")
+    }
+}
+
+/// The key operations a content key allows: encrypt/decrypt for content
+/// encryption, MAC create/verify for MAC algorithms.
+func contentKeyOps(for algorithm: CoseAlgorithm, ops: String) -> [KeyOps] {
+    if algorithm is EncAlgorithm {
+        return ops == "encrypt" ? [EncryptOp()] : [DecryptOp()]
+    }
+    return ops == "encrypt" ? [MacCreateOp()] : [MacVerifyOp()]
 }

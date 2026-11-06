@@ -61,14 +61,14 @@ public class KeyWrap: CoseRecipient {
     // MARK: - Encoding
     
     public override func encode(targetAlgorithm: CoseAlgorithm? = nil) throws -> [CBOR] {
-        guard let alg = targetAlgorithm as? EncAlgorithm else {
-            throw CoseError.invalidAlgorithm("The targetAlgorithm parameter should be included as an EncAlgorithm.")
+        guard let alg = targetAlgorithm else {
+            throw CoseError.invalidAlgorithm("The targetAlgorithm parameter is required.")
         }
         
         var recipient: [CBOR] = [
             CBOR.byteString(phdrEncoded),
             CBOR.fromAny(uhdrEncoded),
-            CBOR.byteString(try self.encrypt(targetAlgorithm: alg))
+            CBOR.byteString(try self.wrapCEK(targetAlgorithm: alg))
         ]
         
         if !recipients.isEmpty {
@@ -83,7 +83,7 @@ public class KeyWrap: CoseRecipient {
     
     // MARK: - Key Management
     
-    private func computeKEK(targetAlgorithm: EncAlgorithm, ops: String) throws -> Data {
+    private func computeKEK(targetAlgorithm: CoseAlgorithm, ops: String) throws -> Data {
         guard let alg = try getAttr(Algorithm()) as? EncAlgorithm else {
             throw CoseError.invalidAlgorithm("The algorithm parameter should be included in either the protected header or unprotected header.")
         }
@@ -96,11 +96,12 @@ public class KeyWrap: CoseRecipient {
                 
                 if ops == "encrypt" {
                     if recipientTypes.contains(String(describing: DirectKeyAgreement.self)) {
-                        key = try recipients.first!
-                            .computeCEK(targetAlgorithm: targetAlgorithm, ops: ops)
+                        // The nested recipient derives this layer's KEK.
+                        key = try recipients.first?
+                            .deriveCEK(targetAlgorithm: alg, ops: ops)
                     } else if recipientTypes.contains(String(describing: KeyWrap.self)) || recipientTypes.contains(String(describing: KeyAgreementWithKeyWrap.self)) {
                         
-                        let keyBytes = Data.randomBytes(count: alg.keyLength!)
+                        let keyBytes = Data.randomBytes(count: try contentKeyLength(for: alg))
                         for recipient in recipients {
                             recipient.payload = keyBytes
                         }
@@ -110,7 +111,7 @@ public class KeyWrap: CoseRecipient {
                     }
                 } else {
                     if recipientTypes.contains(String(describing: DirectKeyAgreement.self)) || recipientTypes.contains(String(describing: KeyWrap.self)) || recipientTypes.contains(String(describing: KeyAgreementWithKeyWrap.self)) {
-                        key = try recipients.first!.decrypt(targetAlgorithm: alg)
+                        key = try recipients.first?.deriveCEK(targetAlgorithm: alg, ops: ops)
                     } else {
                         throw CoseError.unsupportedRecipient("Unsupported COSE recipient class.")
                     }
@@ -126,30 +127,38 @@ public class KeyWrap: CoseRecipient {
     }
     
     public override func computeCEK(targetAlgorithm: EncAlgorithm, ops: String) throws -> CoseSymmetricKey? {
+        return try deriveCEK(targetAlgorithm: targetAlgorithm, ops: ops)
+    }
+    
+    override func deriveCEK(targetAlgorithm: CoseAlgorithm, ops: String) throws -> CoseSymmetricKey? {
+        let keyOps = contentKeyOps(for: targetAlgorithm, ops: ops)
         if ops == "encrypt" {
-            if payload!.isEmpty {
+            guard let payload, !payload.isEmpty else {
                 return nil
-            } else {
-                return try CoseSymmetricKey(
-                    k: payload!,
-                    optionalParams: [
-                        KpAlg(): targetAlgorithm,
-                        KpKeyOps(): [EncryptOp()]
-                    ]
-                )
             }
-        } else {
             return try CoseSymmetricKey(
-                k: decrypt(targetAlgorithm: targetAlgorithm),
-                optionalParams: [
-                    KpAlg(): targetAlgorithm,
-                    KpKeyOps(): [DecryptOp()]
-                ]
+                k: payload,
+                optionalParams: [KpAlg(): targetAlgorithm, KpKeyOps(): keyOps]
+            )
+        } else {
+            let cek: Data = try decrypt(targetAlgorithm: targetAlgorithm)
+            return try CoseSymmetricKey(
+                k: cek,
+                optionalParams: [KpAlg(): targetAlgorithm, KpKeyOps(): keyOps]
             )
         }
     }
     
     public func encrypt(targetAlgorithm: EncAlgorithm) throws -> Data {
+        return try wrapCEK(targetAlgorithm: targetAlgorithm)
+    }
+    
+    /// Wraps the CEK in `payload` for any target algorithm, including MAC
+    /// algorithms for COSE_Mac.
+    func wrapCEK(targetAlgorithm: CoseAlgorithm) throws -> Data {
+        guard let payload else {
+            throw CoseError.valueError("No CEK to wrap")
+        }
         guard let alg = try getAttr(Algorithm()) as? CoseAlgorithm else {
             throw CoseError.invalidAlgorithm("The algorithm parameter should be included in either the protected header or unprotected header.")
         }
@@ -177,7 +186,7 @@ public class KeyWrap: CoseRecipient {
                 )
                 return try (alg as! AesKwAlgorithm).keyWrap(
                     kek: kek,
-                    data: payload!
+                    data: payload
                 )
             case .rsa_ES_OAEP_SHA1, .rsa_ES_OAEP_SHA256, .rsa_ES_OAEP_SHA512:
                 guard let kek = self.key as? RSAKey else {
@@ -190,7 +199,7 @@ public class KeyWrap: CoseRecipient {
                 )
                 return try (alg as! RsaOaep).keyWrap(
                     key: kek,
-                    data: payload!
+                    data: payload
                 )
             default:
                 throw CoseError
@@ -201,14 +210,10 @@ public class KeyWrap: CoseRecipient {
 
     }
     
-    private func encAlgorithm(_ algorithm: CoseAlgorithm) throws -> EncAlgorithm {
-        guard let encAlgorithm = algorithm as? EncAlgorithm else {
-            throw CoseError.invalidAlgorithm("Algorithm \(String(describing: algorithm.fullname)) is not a content encryption algorithm")
-        }
-        return encAlgorithm
-    }
-    
     public func decrypt(targetAlgorithm: CoseAlgorithm) throws -> Data {
+        guard let payload else {
+            throw CoseError.valueError("No wrapped CEK to unwrap")
+        }
         guard let alg = try getAttr(Algorithm()) as? CoseAlgorithm else {
             throw CoseError.invalidAlgorithm("The algorithm parameter should be included in either the protected header or unprotected header.")
         }
@@ -221,7 +226,7 @@ public class KeyWrap: CoseRecipient {
             case .aesKW_128, .aesKW_192, .aesKW_256:
                 let kek = try CoseSymmetricKey(
                     k: try computeKEK(
-                        targetAlgorithm: try encAlgorithm(targetAlgorithm),
+                        targetAlgorithm: targetAlgorithm,
                         ops: "decrypt"
                     ),
                     optionalParams: [KpAlg(): alg, KpKeyOps(): keyOps]
@@ -233,7 +238,7 @@ public class KeyWrap: CoseRecipient {
                 )
                 return try (alg as! AesKwAlgorithm).keyUnwrap(
                     kek: kek,
-                    data: payload!
+                    data: payload
                 )
             case .rsa_ES_OAEP_SHA1, .rsa_ES_OAEP_SHA256, .rsa_ES_OAEP_SHA512:
                 guard let kek = self.key as? RSAKey else {
@@ -246,7 +251,7 @@ public class KeyWrap: CoseRecipient {
                 )
                 return try (alg as! RsaOaep).keyUnwrap(
                     key: kek,
-                    data: payload!
+                    data: payload
                 )
             default:
                 throw CoseError
