@@ -19,14 +19,17 @@ public class MacCommon: CoseMessage {
     /// - Returns: A serialized CBOR representation of the mac structure.
     public var macStructure: Data {
         get throws {
-            guard self.payload != nil else {
+            guard let payload = self.payload else {
                 throw CoseError
                     .valueError("Payload cannot be empty for tag computation.")
             }
             
+            // RFC 9052, section 6.3:
+            // MAC_structure = [context, protected, external_aad, payload]
             var structure: [CBOR] = [CBOR.textString(context)]
             baseStructure(&structure)
-            return try! CBORSerialization.data(from: .array(structure))
+            structure.append(CBOR.byteString(payload))
+            return try CBORSerialization.data(from: .array(structure))
         }
     }
 
