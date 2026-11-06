@@ -1,3 +1,10 @@
+## 2.0.1 (2026-11-06)
+
+### Fix
+
+- use the OAEP hash each RSA-OAEP algorithm names
+- generate full-size RSA keys and reject keys under 2048 bits clearly
+
 ## 2.0.0 (2026-11-06)
 
 ### Feat
