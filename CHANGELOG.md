@@ -1,3 +1,30 @@
+## 2.0.0 (2026-11-06)
+
+### Feat
+
+- support key wrap and ECDH recipients in COSE_Mac
+
+### Fix
+
+- make ECDH static-static recipients send and find the sender key
+- accept HMAC key sizes and throw on bad symmetric key lengths
+- compute AES-CBC-MAC tags as RFC 9053 defines them
+- run recipient checks when fromCoseObject is called without a context
+- always emit a complete Mac0, Mac and Sign1 when not recomputing the tag
+- throw instead of trapping on malformed headers, keys and CBOR
+- make ECDH recipients agree on keys and read ephemeral keys
+- throw instead of crashing on unsupported COSE_Mac recipients
+- encode the COSE_KDF_Context as RFC 9053 defines it
+- make AES key wrap recipients wrap and unwrap the CEK
+- derive the nonce from the Partial IV and Base IV
+- send a detached Sign1 payload as nil
+- always sign both protected headers in the COSE_Sign Sig_structure
+- decode every COSE message type and keep the received protected header
+- encrypt AES-GCM without block padding
+- include the payload in the MAC_structure
+- throw from Data.toCBOR instead of crashing on non-CBOR bytes
+- wrap protected headers and payloads in byte strings when encoding
+
 ## 1.3.3 (2026-10-07)
 
 ### Fix
