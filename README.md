@@ -92,3 +92,44 @@ decoded.key = try OKPKey(curve: curve, x: key.x)
 let isValid = try decoded.verifySignature()
 ```
 
+### Encryption (COSE_Encrypt0)
+```swift
+// A 128-bit symmetric key shared by sender and receiver
+let aesKey = try CoseSymmetricKey.generateKey(keyLength: 16)
+
+let encMsg = Enc0Message(
+    phdr: [Algorithm(): A128GCM()],
+    // AES-GCM needs a fresh 12-byte nonce for every message
+    uhdr: [IV(): Data((0..<12).map { _ in UInt8.random(in: 0...255) })],
+    payload: Data("A secret message".utf8),
+    key: aesKey
+)
+
+// Encrypts the payload and serializes the message to CBOR
+let encrypted = try encMsg.encode()
+
+// The receiver decodes the message and decrypts it with the same key
+let received = try CoseMessage.decode(Enc0Message.self, from: encrypted)
+received.key = aesKey
+let plaintext = try received.decrypt()
+```
+
+### MAC (COSE_Mac0)
+```swift
+let macKey = try CoseSymmetricKey.generateKey(keyLength: 32)
+
+let macMsg = Mac0Message(
+    phdr: [Algorithm(): Hmac256()],
+    payload: Data("An authenticated message".utf8),
+    key: macKey
+)
+
+// Computes the authentication tag and serializes the message to CBOR
+let maced = try macMsg.encode()
+
+// The receiver decodes the message and checks the tag with the same key
+let receivedMac = try CoseMessage.decode(Mac0Message.self, from: maced)
+receivedMac.key = macKey
+let isAuthentic = try receivedMac.verifyTag()
+```
+

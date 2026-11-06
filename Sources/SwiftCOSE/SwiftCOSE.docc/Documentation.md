@@ -19,16 +19,16 @@ Depending on the message type, the array then ends with:
 
 ### Message types
 
-SwiftCOSE supports all six COSE message types:
+SwiftCOSE supports all six COSE message types. Each one encodes as RFC 9052 describes and round-trips through ``CoseMessage/decode(_:from:)``; the test suite checks them against the published COSE Working Group examples.
 
 - **Encrypt0** (``Enc0Message``): an encrypted message for a single recipient. The payload and external data are protected by a shared Content Encryption Key (CEK).
-- **Encrypt** (``EncMessage``): an encrypted message that can have several recipients. Each recipient gets the CEK, protected by that recipient's key, for example with AES key wrap.
+- **Encrypt** (``EncMessage``): an encrypted message that can have several recipients. Each recipient gets the CEK in one of these ways: directly (``DirectEncryption``), with AES key wrap (``KeyWrap``), by ECDH-ES key agreement (``DirectKeyAgreement``), or by ECDH-ES key agreement plus AES key wrap (``KeyAgreementWithKeyWrap``).
 - **MAC0** (``Mac0Message``): an authenticated message for a single recipient.
-- **MAC** (``MacMessage``): an authenticated message that can have several recipients. Each recipient gets the authentication key, protected by that recipient's key.
-- **Sign1** (``Sign1Message``): a signed message with a single signature.
+- **MAC** (``MacMessage``): an authenticated message that can have several recipients. At present the MAC key can only reach recipients directly (``DirectEncryption``); key wrap and key agreement recipients throw an error for MAC messages.
+- **Sign1** (``Sign1Message``): a signed message with a single signature. The payload can be detached: it is then sent as `nil` and passed to the encode and verify calls instead.
 - **Sign** (``SignMessage``): a message signed by one or more signers. Each signature is carried in its own COSE signature structure (``CoseSignature``).
 
-Use ``CoseMessage/decode(_:from:)`` to decode CBOR-encoded bytes into a message of a given type.
+Use ``CoseMessage/decode(_:from:)`` to decode CBOR-encoded bytes. The CBOR tag selects the message type: pass `CoseMessage.self` to accept any type, or a specific class such as `Sign1Message.self` to accept only that type.
 
 ### Keys
 
