@@ -19,7 +19,7 @@ public class EncCommon: CoseMessage {
         get throws {
             var structure: [CBOR] = [CBOR.textString(context)]
             baseStructure(&structure)
-            return try! CBORSerialization.data(from: .array(structure))
+            return try CBORSerialization.data(from: .array(structure))
         }
     }
 
@@ -53,6 +53,10 @@ public class EncCommon: CoseMessage {
 
         let nonce = try getNonce()
         
+        guard let payload = self.payload else {
+            throw CoseError.valueError("No ciphertext to decrypt")
+        }
+        
         try key
             .verify(
                 keyType: CoseSymmetricKey.self,
@@ -65,7 +69,7 @@ public class EncCommon: CoseMessage {
                 .decrypt(
                     key: key as! CoseSymmetricKey,
                     nonce: nonce,
-                    ciphertext: payload!,
+                    ciphertext: payload,
                     aad: encStructure
                 )
         } else if let alg = alg as? AesGcmAlgorithm {
@@ -73,7 +77,7 @@ public class EncCommon: CoseMessage {
                 .decrypt(
                     key: key as! CoseSymmetricKey,
                     nonce: nonce,
-                    ciphertext: payload!,
+                    ciphertext: payload,
                     aad: encStructure
                 )
         } else {
@@ -95,6 +99,10 @@ public class EncCommon: CoseMessage {
 
         let nonce = try getNonce()
         
+        guard let payload = self.payload else {
+            throw CoseError.valueError("No payload to encrypt")
+        }
+        
         try key
             .verify(
                 keyType: CoseSymmetricKey.self,
@@ -107,7 +115,7 @@ public class EncCommon: CoseMessage {
                 .encrypt(
                     key: key as! CoseSymmetricKey,
                     nonce: nonce,
-                    data: payload!,
+                    data: payload,
                     aad: encStructure
                 )
         } else if let alg = alg as? AesGcmAlgorithm {
@@ -115,7 +123,7 @@ public class EncCommon: CoseMessage {
                 .encrypt(
                     key: key as! CoseSymmetricKey,
                     nonce: nonce,
-                    data: payload!,
+                    data: payload,
                     aad: encStructure
                 )
         } else {
@@ -124,31 +132,24 @@ public class EncCommon: CoseMessage {
     }
 
     private func getNonce() throws -> Data {
-        // Attempt to retrieve the IV attribute
-        let nonce = try getAttr(IV()) as? Data
-        
-        if nonce == nil, let baseIV = self.key?.baseIV, !baseIV.isEmpty {
-            // Retrieve the PartialIV attribute
-            guard let partialIV = try getAttr(PartialIV()) as? String else {
-                throw CoseError.invalidIV("Partial IV not found while baseIV is present")
-            }
-            
-            // Perform the XOR operation between PartialIV and BaseIV
-            let partialIVInt = partialIV.hexStringToData.reduce(0) {
-                ($0 << 8) | Int($1)
-            }
-            let baseIVInt = baseIV.reduce(0) { ($0 << 8) | Int($1) }
-            let combinedInt = partialIVInt ^ baseIVInt
-            
-            // Convert the resulting integer back into bytes
-            let combinedBytes = withUnsafeBytes(of: combinedInt.bigEndian) { Data($0) }
-            return combinedBytes
+        // A full IV in the headers wins.
+        if let nonce = (try? getAttr(IV())) as? Data {
+            return nonce
         }
         
-        if nonce == nil, let baseIV = self.key?.baseIV, baseIV.isEmpty {
+        // RFC 9052, section 3.1: otherwise left-pad the Partial IV to the
+        // length of the key's Base IV and XOR the two.
+        guard let baseIV = self.key?.baseIV, !baseIV.isEmpty else {
             throw CoseError.invalidIV("No IV found")
         }
+        guard let partialIV = (try? getAttr(PartialIV())) as? Data else {
+            throw CoseError.invalidIV("Partial IV not found while baseIV is present")
+        }
+        guard partialIV.count <= baseIV.count else {
+            throw CoseError.invalidIV("Partial IV is longer than the Base IV")
+        }
         
-        return nonce!
+        let padded = Data(count: baseIV.count - partialIV.count) + partialIV
+        return Data(zip(padded, baseIV).map { $0 ^ $1 })
     }
 }
