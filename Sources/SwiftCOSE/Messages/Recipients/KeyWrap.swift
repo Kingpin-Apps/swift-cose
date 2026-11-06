@@ -150,8 +150,11 @@ public class KeyWrap: CoseRecipient {
         }
         let algId = try CoseAlgorithmIdentifier.fromCoseAlgorithm(alg)
         
-        if phdr.isEmpty {
-            throw CoseError.invalidRecipientConfiguration("The algorithm parameter should at least be included in the unprotected header.")
+        // RFC 9053, section 6.2.1: AES Key Wrap recipients carry a
+        // zero-length protected header.
+        let needsZeroPHdr: [CoseAlgorithmIdentifier] = [.aesKW_128, .aesKW_192, .aesKW_256]
+        if needsZeroPHdr.contains(algId) && !phdr.isEmpty {
+            throw CoseError.invalidRecipientConfiguration("Recipient class KeyWrap with \(String(describing: alg.fullname)) must have a zero-length protected header.")
         }
         
         let keyOps = [EncryptOp(), WrapOp()]
@@ -160,7 +163,7 @@ public class KeyWrap: CoseRecipient {
             case .aesKW_128, .aesKW_192, .aesKW_256:
                 let kek = try CoseSymmetricKey(
                     k: try computeKEK(targetAlgorithm: targetAlgorithm, ops: "encrypt"),
-                    optionalParams: [KpAlg(): targetAlgorithm, KpKeyOps(): keyOps]
+                    optionalParams: [KpAlg(): alg, KpKeyOps(): keyOps]
                 )
                 try kek.verify(
                     keyType: CoseSymmetricKey.self,
@@ -209,7 +212,7 @@ public class KeyWrap: CoseRecipient {
                         targetAlgorithm: targetAlgorithm as! EncAlgorithm,
                         ops: "decrypt"
                     ),
-                    optionalParams: [KpAlg(): targetAlgorithm, KpKeyOps(): keyOps]
+                    optionalParams: [KpAlg(): alg, KpKeyOps(): keyOps]
                 )
                 try kek.verify(
                     keyType: CoseSymmetricKey.self,
@@ -229,7 +232,7 @@ public class KeyWrap: CoseRecipient {
                     algorithm: alg,
                     keyOps: keyOps
                 )
-                return try (alg as! RsaOaep).keyWrap(
+                return try (alg as! RsaOaep).keyUnwrap(
                     key: kek,
                     data: payload!
                 )

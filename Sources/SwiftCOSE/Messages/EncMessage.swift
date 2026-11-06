@@ -139,7 +139,7 @@ public class EncMessage: EncCommon {
             var keyBytes = Data.randomBytes(count: targetAlgorithm.keyLength!)
             
             for recipient in recipients {
-                if ((recipient.payload?.isEmpty) != nil) {
+                if recipient.payload?.isEmpty ?? true {
                     recipient.payload = keyBytes
                 } else {
                     keyBytes = recipient.payload!

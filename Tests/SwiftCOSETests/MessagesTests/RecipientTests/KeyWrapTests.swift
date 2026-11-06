@@ -92,13 +92,14 @@ struct KeyWrapTests {
     @Test func testEncodingKeyWrap() async throws {
         let key = try CoseSymmetricKey.generateKey(keyLength: 32)
         let payload = key.k
-        let phdr: OrderedDictionary<CoseHeaderAttribute, Any> = [
-            Algorithm(): A256KW()
+        // RFC 9053, section 6.2.1: AES Key Wrap recipients carry the
+        // algorithm in the unprotected header; the protected header is empty.
+        let uhdr: OrderedDictionary<CoseHeaderAttribute, Any> = [
+            Algorithm(): A256KW(),
+            ContentType(): "application/cbor"
         ]
-        let uhdr: OrderedDictionary<CoseHeaderAttribute, Any> = [ContentType(): "application/cbor"]
         
         let recipient = KeyWrap(
-            phdr: phdr,
             uhdr: uhdr,
             payload: payload,
             key: key
@@ -107,6 +108,20 @@ struct KeyWrapTests {
         let encoded = try recipient.encode(targetAlgorithm: A256KW())
         
         #expect(encoded.count == 3)
+        #expect(encoded[0] == CBOR.byteString(Data()))
+    }
+    
+    @Test func testEncodingKeyWrapRejectsProtectedHeader() async throws {
+        let key = try CoseSymmetricKey.generateKey(keyLength: 32)
+        let recipient = KeyWrap(
+            phdr: [Algorithm(): A256KW()],
+            payload: key.k,
+            key: key
+        )
+        
+        #expect(throws: CoseError.self) {
+            _ = try recipient.encode(targetAlgorithm: A256KW())
+        }
     }
     
     // MARK: - Test Encryption and Decryption
