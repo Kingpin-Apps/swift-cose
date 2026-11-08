@@ -103,7 +103,13 @@ public class X5U {
 public class X5Chain {
     public var certChain: Certificate
 
-    public init(certData: Data, verify: Bool = false) throws {
+    /// Parses a certificate.
+    ///
+    /// With `verify: true` the certificate must be inside its validity
+    /// period at `validationTime` and allow digital signatures, or this
+    /// throws. That does not prove who issued it: use
+    /// ``validate(trustRoots:intermediates:at:)`` for path validation.
+    public init(certData: Data, verify: Bool = false, validationTime: Date = Date()) throws {
         do {
             self.certChain = try Certificate(derEncoded: certData.toBytes)
         } catch {
@@ -111,33 +117,63 @@ public class X5Chain {
         }
 
         if verify {
+            let valid: Bool
             do {
-                let _ = try verifyChain(keyUsage: ["digital_signature"])
+                valid = try verifyChain(keyUsage: ["digital_signature"], at: validationTime)
             } catch {
                 throw CoseError.invalidCertificate("Certificate verification failed: \(error)")
+            }
+            guard valid else {
+                throw CoseError.invalidCertificate("The certificate is expired, not yet valid, or not valid for the requested key usage.")
             }
         }
     }
 
-    public func verifyChain(keyUsage: Set<String>) throws -> Bool {
-        /// Validates the certificate path and that the certificate is valid for the key usage and extended key usage purposes specified.
-        /// - Parameters:
-        ///  - keyUsage: A set of unicode strings of the required key usage purposes. Valid values include:
-        ///     - "digital_signature"
-        /// - Returns: A boolean indicating if the certificate chain is valid.
-        /// - Throws: An error if the certificate chain is invalid.
-        
-        // Extract KeyUsage extension
-        guard let keyUsageExtension = try certChain.extensions.keyUsage else {
-            throw CoseError.invalidCertificate("The X.509 certificate provided is not valid for the purpose is not valid for digitalSignature")
+    /// Checks that the certificate is inside its validity period at `date`
+    /// and that its KeyUsage extension allows every purpose in `keyUsage`.
+    ///
+    /// This does not validate the certificate path or its issuer.
+    ///
+    /// - Parameters:
+    ///   - keyUsage: The required key usage purposes: `digital_signature`,
+    ///     `non_repudiation`, `key_encipherment`, `data_encipherment`,
+    ///     `key_agreement`, `key_cert_sign`, `crl_sign`.
+    ///   - date: The time to check the validity period against.
+    /// - Returns: `true` when the certificate is valid at `date` for all the purposes.
+    /// - Throws: When the certificate has no KeyUsage extension or a purpose is unknown.
+    public func verifyChain(keyUsage: Set<String>, at date: Date = Date()) throws -> Bool {
+        guard let usage = try certChain.extensions.keyUsage else {
+            throw CoseError.invalidCertificate("The X.509 certificate has no KeyUsage extension.")
         }
+        for purpose in keyUsage {
+            let allowed: Bool
+            switch purpose {
+            case "digital_signature": allowed = usage.digitalSignature
+            case "non_repudiation", "content_commitment": allowed = usage.nonRepudiation
+            case "key_encipherment": allowed = usage.keyEncipherment
+            case "data_encipherment": allowed = usage.dataEncipherment
+            case "key_agreement": allowed = usage.keyAgreement
+            case "key_cert_sign": allowed = usage.keyCertSign
+            case "crl_sign": allowed = usage.cRLSign
+            default: throw CoseError.invalidCertificate("Unknown key usage purpose \(purpose).")
+            }
+            if !allowed { return false }
+        }
+        return certChain.notValidBefore <= date && date <= certChain.notValidAfter
+    }
 
-        // Check if `digitalSignature` is enabled
-        if keyUsageExtension.digitalSignature {
-           return true
-        } else {
-           return false
+    /// Validates the certificate path to one of `trustRoots` with the
+    /// RFC 5280 policy, at `date`.
+    ///
+    /// - Returns: `true` when a valid chain to a trust root exists.
+    @available(macOS 10.15, iOS 13, watchOS 6, tvOS 13, macCatalyst 13, visionOS 1.0, *)
+    public func validate(trustRoots: [Certificate], intermediates: [Certificate] = [], at date: Date = Date()) async -> Bool {
+        var verifier = Verifier(rootCertificates: CertificateStore(trustRoots)) {
+            RFC5280Policy(validationTime: date)
         }
+        let result = await verifier.validate(leaf: certChain, intermediates: CertificateStore(intermediates))
+        if case .validCertificate = result { return true }
+        return false
     }
 
     public func encode() -> Any {

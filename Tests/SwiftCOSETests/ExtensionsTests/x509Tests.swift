@@ -162,9 +162,15 @@ struct X509Tests {
             fatalError("File not found: valid_certificate.der")
         }
         let certificate = try Data(contentsOf: URL(fileURLWithPath: filePath))
-        let chain = try X5Chain(certData: certificate, verify: true)
+        // The fixture is valid from 2024-12-25 to 2025-12-25.
+        let inValidity = Date(timeIntervalSince1970: 1_750_000_000)
+        let chain = try X5Chain(certData: certificate, verify: true, validationTime: inValidity)
         
         #expect(chain.certChain.subject.description.isEmpty == false)
+        // Out of its validity period it is refused.
+        #expect(throws: CoseError.self) {
+            _ = try X5Chain(certData: certificate, verify: true, validationTime: Date(timeIntervalSince1970: 1_800_000_000))
+        }
     }
     
     @Test func testX5ChainVerificationFails() async throws {
