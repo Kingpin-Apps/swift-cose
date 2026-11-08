@@ -1,3 +1,11 @@
+## 3.0.0 (2026-11-08)
+
+### Fix
+
+- address the 2026-11-08 security audit findings
+- **x509**: make X5Chain verify throw and add path validation
+- **deps**: require swift-cbor-codable 0.6.0 and bound string lengths
+
 ## 2.0.1 (2026-11-06)
 
 ### Fix
