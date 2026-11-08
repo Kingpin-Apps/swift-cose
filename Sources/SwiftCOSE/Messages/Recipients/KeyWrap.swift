@@ -66,8 +66,8 @@ public class KeyWrap: CoseRecipient {
         }
         
         var recipient: [CBOR] = [
-            CBOR.byteString(phdrEncoded),
-            CBOR.fromAny(uhdrEncoded),
+            CBOR.byteString(try protectedHeaderBytes()),
+            try CBOR.fromCoseValue(uhdrEncoded),
             CBOR.byteString(try self.wrapCEK(targetAlgorithm: alg))
         ]
         
@@ -86,6 +86,19 @@ public class KeyWrap: CoseRecipient {
     private func computeKEK(targetAlgorithm: CoseAlgorithm, ops: String) throws -> Data {
         guard let alg = try getAttr(Algorithm()) as? EncAlgorithm else {
             throw CoseError.invalidAlgorithm("The algorithm parameter should be included in either the protected header or unprotected header.")
+        }
+        // A key the caller supplied must be allowed for this key wrap
+        // algorithm and operation; it used to be copied into a fresh key
+        // that was then checked against itself.
+        if let callerKey = key {
+            guard let symmetric = callerKey as? CoseSymmetricKey else {
+                throw CoseError.invalidKey("AES key wrap needs a symmetric key.")
+            }
+            try symmetric.verify(
+                keyType: CoseSymmetricKey.self,
+                algorithm: alg,
+                keyOps: ops == "encrypt" ? [WrapOp()] : [UnwrapOp()]
+            )
         }
         
         if key == nil {

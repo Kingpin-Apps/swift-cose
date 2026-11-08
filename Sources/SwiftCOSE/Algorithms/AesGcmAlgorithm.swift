@@ -2,7 +2,23 @@ import Foundation
 import CryptoSwift
 
 public class AesGcmAlgorithm: EncAlgorithm  {
+    /// RFC 9053 section 4.1: AES-GCM in COSE uses a 96-bit IV and a 128-bit tag.
+    static let nonceLength = 12
+    static let tagLength = 16
+
+    /// Checks the key and IV lengths against the algorithm before CryptoSwift
+    /// sees them.
+    func checkParameters(key: CoseSymmetricKey, nonce: Data) throws {
+        if let keyLength, key.k.count != keyLength {
+            throw CoseError.invalidKey("\(fullname) needs a \(keyLength)-byte key, not \(key.k.count)")
+        }
+        guard nonce.count == Self.nonceLength else {
+            throw CoseError.invalidIV("\(fullname) needs a \(Self.nonceLength)-byte IV, not \(nonce.count)")
+        }
+    }
+
     public func encrypt(key: CoseSymmetricKey, nonce: Data, data: Data, aad: Data?) throws -> Data {
+        try checkParameters(key: key, nonce: nonce)
         let gcm = GCM(
             iv: nonce.toBytes,
             additionalAuthenticatedData: aad?.toBytes,
@@ -25,6 +41,12 @@ public class AesGcmAlgorithm: EncAlgorithm  {
     }
 
     public func decrypt(key: CoseSymmetricKey, nonce: Data, ciphertext: Data, aad: Data?) throws -> Data {
+        try checkParameters(key: key, nonce: nonce)
+        // A ciphertext shorter than the tag would make CryptoSwift take a
+        // negative-length prefix, which traps.
+        guard ciphertext.count >= Self.tagLength else {
+            throw CoseError.valueError("Ciphertext is shorter than the AES-GCM tag")
+        }
         let gcm = GCM(
             iv: nonce.toBytes,
             additionalAuthenticatedData: aad?.toBytes,

@@ -17,24 +17,56 @@ public class CoseKey: CustomStringConvertible {
     private var keyTypes: [String: CoseKey] = [:]
     private var key: CoseKey?
     
+    /// The key operations this key type can be restricted to.
+    public class var supportedKeyOps: [KeyOps.Type] {
+        [SignOp.self, VerifyOp.self, EncryptOp.self, DecryptOp.self, WrapOp.self,
+         UnwrapOp.self, DeriveKeyOp.self, DeriveBitsOp.self, MacCreateOp.self, MacVerifyOp.self]
+    }
+
+    private var keyOpsEntry: (key: AnyHashable, value: Any)? {
+        store.first(where: {
+            $0.key == KpKeyOps() as AnyHashable || $0.key == KpKeyOps().identifier as AnyHashable || $0.key == KpKeyOps().fullname as AnyHashable
+        })
+    }
+
+    /// Whether the key carries a key_ops parameter. When it does,
+    /// ``verify(keyType:algorithm:keyOps:)`` only allows those operations.
+    public var hasKeyOps: Bool { keyOpsEntry != nil }
+
     public var keyOps: [KeyOps] {
         get {
-            let value = store.first(where: {
-                $0.key == KpKeyOps() as AnyHashable || $0.key == KpKeyOps().identifier as AnyHashable || $0.key == KpKeyOps().fullname as AnyHashable
-            })?.value
-            
+            guard let value = keyOpsEntry?.value else { return [] }
+            if let ops = value as? [KeyOps] { return ops }
             // Unknown or malformed operations are skipped rather than
-            // trapping: key parameters can come from received messages.
+            // trapping. The key still counts as restricted (`hasKeyOps`),
+            // so a skipped operation is never allowed.
             if let values = value as? [Any] {
                 return values.compactMap { try? KeyOps.fromId(for: $0) }
             }
-            return []
+            return (try? KeyOps.fromId(for: value)).map { [$0] } ?? []
         }
         set {
+            for op in newValue where !Self.supportedKeyOps.contains(where: { $0 == type(of: op) }) {
+                fatalError("Invalid COSE key operation \(op) for key type \(Self.self)")
+            }
+            if let entry = keyOpsEntry { store.removeValue(forKey: entry.key) }
             store[KpKeyOps()] = newValue
         }
     }
-    
+
+    /// Parses a key_ops value from a COSE_Key: one operation or an array.
+    /// - Throws: When an operation is unknown or not allowed for `keyType`.
+    static func parseKeyOps(_ value: Any, for keyType: CoseKey.Type) throws -> [KeyOps] {
+        let values: [Any] = (value as? [Any]) ?? [value]
+        return try values.map { element in
+            let op = try KeyOps.fromId(for: element)
+            guard keyType.supportedKeyOps.contains(where: { $0 == type(of: op) }) else {
+                throw CoseError.invalidKeyOps("Invalid COSE key operation \(op) for key type \(keyType)")
+            }
+            return op
+        }
+    }
+
     public var kty: KTY? {
         get {
             let value = store.first(where: {
@@ -90,9 +122,6 @@ public class CoseKey: CustomStringConvertible {
     // MARK: - Initialization
     public init(keyDict: [AnyHashable: Any]) {
         self.store = keyDict
-        if keyDict[KpKeyOps()] != nil {
-            self.store.removeValue(forKey: KpKeyOps())
-        }
     }
     
     // MARK: - Methods
@@ -396,12 +425,11 @@ public class CoseKey: CustomStringConvertible {
             throw CoseError.invalidAlgorithm("Invalid algorithm: \(alg) expected \(algorithm)")
         }
         
-        if !self.keyOps.isEmpty {
-            let supportedOps = self.keyOps.map { $0 }
-            let requestedOps = Set(keyOps)
-            if !requestedOps.isSubset(of: supportedOps) {
-                throw CoseError.invalidKeyOps("Invalid key operations")
-            }
+        // `keyOps` lists the operations that would serve the caller (for
+        // example derive key or derive bits); a restricted key must allow
+        // at least one of them.
+        if hasKeyOps, Set(self.keyOps).isDisjoint(with: keyOps) {
+            throw CoseError.invalidKeyOps("The key does not allow \(keyOps)")
         }
     }
     

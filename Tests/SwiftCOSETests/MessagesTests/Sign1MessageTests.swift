@@ -57,7 +57,7 @@ struct Sign1MessageTests {
         let phdr: [CoseHeaderAttribute: Any] = [
             Algorithm(): Es256().identifier!
         ]
-        let protectedHdrMap = CBOR.map((phdr as Dictionary<AnyHashable, Any>).mapKeysToCbor)
+        let protectedHdrMap = CBOR.map(try (phdr as Dictionary<AnyHashable, Any>).mapKeysToCbor())
         let encoded = try CBORSerialization.data(from: protectedHdrMap)
         
         let coseArray: [CBOR] = [

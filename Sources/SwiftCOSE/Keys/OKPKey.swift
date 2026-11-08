@@ -50,27 +50,8 @@ public class OKPKey: CoseKey {
     }
     
     // MARK: - Key Operations
-    private var _keyOps: [KeyOps] = []
-    public override var keyOps: [KeyOps] {
-        get {
-            return _keyOps as [KeyOps]
-        }
-        set {
-            let supportedOps: [KeyOps.Type] = [
-                SignOp.self,
-                VerifyOp.self,
-                DeriveKeyOp.self,
-                DeriveBitsOp.self
-            ]
-            
-            for ops in newValue {
-                // Check if the operation is supported by the key type
-                guard supportedOps.contains(where: { $0 == type(of: ops) }) else {
-                    fatalError("Invalid COSE key operation \(ops) for key type \(OKPKey.self)")
-                }
-            }
-            _keyOps = newValue 
-        }
+    public override class var supportedKeyOps: [KeyOps.Type] {
+        [SignOp.self, VerifyOp.self, DeriveKeyOp.self, DeriveBitsOp.self]
     }
     
     // MARK: - Initialization Methods
@@ -92,6 +73,10 @@ public class OKPKey: CoseKey {
         // Transform optional parameters
         for (key, value) in optionalParams {
             let kp = try OKPKeyParam.fromId(for: key)
+            if kp is KpKeyOps {
+                transformedDict[kp] = try CoseKey.parseKeyOps(value, for: OKPKey.self)
+                continue
+            }
             if let parser = kp.valueParser {
                 if let values = value as? Array<AnyHashable> {
                     transformedDict[kp] = try values.map { try parser($0) }
@@ -137,10 +122,18 @@ public class OKPKey: CoseKey {
         CoseKey.removeFromDict(&optionalParams, parameter: OKPKpD())
         CoseKey.removeFromDict(&optionalParams, parameter: OKPKpCurve())
         
+        // Components must be byte strings. A value of another type used to
+        // become nil here and then trap at verify.
+        func component(_ value: Any) throws -> Data? {
+            guard let data = value as? Data else {
+                throw CoseError.invalidKey("OKP key components must be byte strings")
+            }
+            return data.isEmpty ? nil : data
+        }
         return try OKPKey(
             curve: curve,
-            x: x as? Data,
-            d: d as? Data,
+            x: try component(x),
+            d: try component(d),
             optionalParams: optionalParams
         )
     }

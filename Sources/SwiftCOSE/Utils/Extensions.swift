@@ -154,78 +154,84 @@ extension String {
 
 // MARK: - OrderedDictionary Extensions
 extension OrderedDictionary {
-    var mapKeysToCbor: OrderedDictionary<CBOR, CBOR> {
-        return self.reduce(into: [:]) { result, element in
-            result[CBOR.fromAny(element.key)] = CBOR.fromAny(element.value)
+    func mapKeysToCbor() throws -> OrderedDictionary<CBOR, CBOR> {
+        try self.reduce(into: [:]) { result, element in
+            result[try CBOR.fromCoseValue(element.key)] = try CBOR.fromCoseValue(element.value)
         }
     }
 }
 
 // MARK: - Dictionary Extensions
 extension Dictionary where Key == AnyHashable, Value == Any {
-    var mapKeysToCbor: OrderedDictionary<CBOR, CBOR> {
-        return self.reduce(into: [:]) { result, element in
-            result[CBOR.fromAny(element.key)] = CBOR.fromAny(element.value)
+    func mapKeysToCbor() throws -> OrderedDictionary<CBOR, CBOR> {
+        try self.reduce(into: [:]) { result, element in
+            result[try CBOR.fromCoseValue(element.key)] = try CBOR.fromCoseValue(element.value)
         }
     }
 }
 extension Dictionary where Key == AnyHashable, Value == CoseHeaderAttribute {
-    var mapKeysToCbor: OrderedDictionary<CBOR, CBOR> {
-        return self.reduce(into: [:]) { result, element in
-            result[CBOR.fromAny(element.key)] = CBOR.fromAny(element.value)
+    func mapKeysToCbor() throws -> OrderedDictionary<CBOR, CBOR> {
+        try self.reduce(into: [:]) { result, element in
+            result[try CBOR.fromCoseValue(element.key)] = try CBOR.fromCoseValue(element.value)
         }
     }
 }
 
 // MARK: - CBOR Extensions
 extension CBOR {
-    static func fromAny(_ value: Any) -> CBOR {
-        if let stringValue = value as? String {
+    /// Converts a header or key value to CBOR.
+    ///
+    /// - Throws: When the value has no CBOR form. It used to become CBOR
+    ///   null, which silently changed what was signed or sent.
+    static func fromCoseValue(_ value: Any) throws -> CBOR {
+        // Map keys arrive as AnyHashable; convert the wrapped value, or an
+        // integer key could bridge to a Bool on Apple platforms.
+        if let hashable = value as? AnyHashable, !(hashable.base is AnyHashable) {
+            return try fromCoseValue(hashable.base)
+        }
+        if let cborValue = value as? CBOR {
+            return cborValue
+        } else if let stringValue = value as? String {
             return .textString(stringValue)
-        } else if let intValue = value as? Int {
-            return CBOR(intValue)
-        } else if let uint64Value = value as? UInt64 {
-            // Decoded CBOR unsigned integers come back as UInt64.
-            return .unsignedInt(uint64Value)
-        } else if let int64Value = value as? Int64 {
-            // Decoded CBOR negative integers come back as Int64.
-            return int64Value >= 0
-                ? .unsignedInt(UInt64(int64Value))
-                : .negativeInt(UInt64(-1 - int64Value))
-        } else if let simpleValue = value as? UInt8 {
-            return .simple(simpleValue)
-        } else if let simpleValue = value as? Int8 {
-            return .simple(UInt8(simpleValue))
+        } else if Swift.type(of: value) == Bool.self, let boolValue = value as? Bool {
+            // Exact type checks: on Apple platforms an Int in an Any casts
+            // to Bool or Double through NSNumber bridging.
+            return .boolean(boolValue)
+        } else if let integer = value as? any BinaryInteger {
+            // Every integer width is a CBOR integer (UInt8 and Int8 used to
+            // become simple values).
+            if let signed = Int64(exactly: integer) {
+                return signed >= 0 ? .unsignedInt(UInt64(signed)) : .negativeInt(UInt64(-1 - signed))
+            } else if let unsigned = UInt64(exactly: integer) {
+                return .unsignedInt(unsigned)
+            }
+            throw CoseError.valueError("Integer \(integer) does not fit in CBOR")
         } else if let dataValue = value as? Data {
             return .byteString(dataValue)
-        } else if let boolValue = value as? Bool {
-            return .boolean(boolValue)
-        } else if let floatValue = value as? Float {
+        } else if Swift.type(of: value) == Float.self, let floatValue = value as? Float {
             return .float(floatValue)
-        } else if let doubleValue = value as? Double {
+        } else if Swift.type(of: value) == Double.self, let doubleValue = value as? Double {
             return .double(doubleValue)
         } else if let arrayValue = value as? [Any] {
-            return .array(arrayValue.map { CBOR.fromAny($0) })
+            return .array(try arrayValue.map { try CBOR.fromCoseValue($0) })
         } else if let attrValue = value as? CoseAttribute {
             if let identifier = attrValue.identifier {
                 return CBOR(identifier)
             } else if let fullname = attrValue.fullname {
                 return .textString(fullname)
-            } else {
-                return .null
             }
+            throw CoseError.valueError("\(attrValue) has no identifier or name")
         } else if let keyValue = value as? CoseKey {
             // A COSE_Key carried in a header, e.g. an ephemeral key.
-            return .map(keyValue.store.mapKeysToCbor)
+            return .map(try keyValue.store.mapKeysToCbor())
         } else if let dictValue = value as? OrderedDictionary<CoseHeaderAttribute, Any> {
-            return .map(dictValue.mapKeysToCbor)
+            return .map(try dictValue.mapKeysToCbor())
         } else if let dictValue = value as? [AnyHashable: CoseHeaderAttribute] {
-            return .map(dictValue.mapKeysToCbor)
+            return .map(try dictValue.mapKeysToCbor())
         } else if let dictValue = value as? [AnyHashable: Any] {
-            return .map(dictValue.mapKeysToCbor)
-        } else {
-            return .null
+            return .map(try dictValue.mapKeysToCbor())
         }
+        throw CoseError.valueError("Cannot encode a value of type \(type(of: value)) as CBOR")
     }
 }
 

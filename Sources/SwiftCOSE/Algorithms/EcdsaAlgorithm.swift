@@ -46,9 +46,12 @@ public class EcdsaAlgorithm: CoseAlgorithm {
     /// - Returns: True if the signature is valid
     public func verify(key: EC2Key, data: Data, signature: Data) throws -> Bool {
         // Create x963Representation: a prefix of 0x04 followed by x and y concatenated
+        guard let x = key.x, let y = key.y else {
+            throw CoseError.invalidKey("An EC2 public key needs x and y")
+        }
         var x963Representation = Data([0x04])
-        x963Representation.append(key.x!)
-        x963Representation.append(key.y!)
+        x963Representation.append(x)
+        x963Representation.append(y)
         
         var isValid: Bool = false
         let algId = CoseAlgorithmIdentifier(rawValue: identifier!)
@@ -82,13 +85,7 @@ public class EcdsaAlgorithm: CoseAlgorithm {
                 
                 do {
                     let sig = try P521.Signing.ECDSASignature(derRepresentation: signature)
-                    isValid = publicKey.isValidSignature(sig, for: SHA384.hash(data: data))
-                    isValid = publicKey
-                        .isValidSignature(
-                            try P521.Signing
-                                .ECDSASignature(derRepresentation: signature),
-                            for: SHA512.hash(data: data)
-                        )
+                    isValid = publicKey.isValidSignature(sig, for: SHA512.hash(data: data))
                 } catch {
                     throw CoseError.genericError("Error verifying signature. \(error.localizedDescription)")
                 }

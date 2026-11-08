@@ -80,8 +80,8 @@ public class MacMessage: MacCommon {
         if mac {
             let computedTag = try self.computeTag()
             message = [
-                CBOR.byteString(phdrEncoded),
-                CBOR.fromAny(uhdrEncoded),
+                CBOR.byteString(try protectedHeaderBytes()),
+                try CBOR.fromCoseValue(uhdrEncoded),
                 payload.map { CBOR.byteString($0) } ?? CBOR.null,
                 CBOR.byteString(computedTag)
             ]
@@ -92,8 +92,8 @@ public class MacMessage: MacCommon {
                 throw CoseError.valueError("No authentication tag to encode; use mac: true or set authTag.")
             }
             message = [
-                CBOR.byteString(phdrEncoded),
-                CBOR.fromAny(uhdrEncoded),
+                CBOR.byteString(try protectedHeaderBytes()),
+                try CBOR.fromCoseValue(uhdrEncoded),
                 payload.map { CBOR.byteString($0) } ?? CBOR.null,
                 CBOR.byteString(authTag)
             ]
@@ -124,6 +124,7 @@ public class MacMessage: MacCommon {
 
         if recipients.contains(where: { $0 is DirectEncryption }) {
             // Key should already be known
+            try DirectEncryption.requirePlainDirect(recipients)
             return try super.computeTag()
         } else if recipients.contains(where: { $0 is DirectKeyAgreement }) {
             self.key = try recipients.first?
@@ -180,6 +181,7 @@ public class MacMessage: MacCommon {
         let _ = try CoseRecipient.verifyRecipients(recipients)
         
         if recipient is DirectEncryption {
+            try DirectEncryption.requirePlainDirect([recipient])
             return try verifyTag()
         } else if recipient is DirectKeyAgreement || recipient is KeyWrap || recipient is KeyAgreementWithKeyWrap {
             self.key = try recipient.deriveCEK(targetAlgorithm: targetAlgorithm, ops: "decrypt")

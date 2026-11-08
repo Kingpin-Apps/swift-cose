@@ -99,10 +99,25 @@ public class DirectEncryption: CoseRecipient {
         }
 
         return [
-            CBOR.byteString(phdrEncoded),
-            CBOR.fromAny(uhdrEncoded),
+            CBOR.byteString(try protectedHeaderBytes()),
+            try CBOR.fromCoseValue(uhdrEncoded),
             CBOR.byteString(Data())
         ]
+    }
+
+    /// Throws unless every direct recipient uses plain `direct` (-6).
+    ///
+    /// The `direct+HKDF-*` algorithms must derive the content key with
+    /// HKDF. That is not implemented, so the shared key must not be used
+    /// as the content key for them.
+    static func requirePlainDirect(_ recipients: [CoseRecipient]) throws {
+        for case let recipient as DirectEncryption in recipients {
+            let alg = try recipient.getAttr(Algorithm())
+            let identifier = (alg as? CoseAlgorithm)?.identifier ?? (alg as? Int)
+            guard identifier == CoseAlgorithmIdentifier.direct.rawValue else {
+                throw CoseError.unsupportedRecipient("direct+HKDF key derivation is not implemented.")
+            }
+        }
     }
 
     // Compute Content Encryption Key (CEK)

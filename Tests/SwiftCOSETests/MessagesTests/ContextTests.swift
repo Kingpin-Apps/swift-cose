@@ -44,7 +44,7 @@ struct ContextTests {
         // other is a byte string.
         #expect(
             encoded[1] == CBOR.byteString(
-                try CBORSerialization.data(from: .map(suppPubInfo.protected.mapKeysToCbor))
+                try CBORSerialization.data(from: .map(try suppPubInfo.protected.mapKeysToCbor()))
             ),
             "Second element should be the serialized protected header."
         )

@@ -93,14 +93,22 @@ public class CoseRecipient: CoseMessage {
         throw CoseError.unsupportedRecipient("\(type(of: self)) cannot decrypt a key.")
     }
     
-    /// The peer's static key: from the message headers when present,
-    /// otherwise from `localAttrs` (for example when the message only
-    /// carries the key's ID).
-    func peerStaticKey() -> EC2Key? {
-        if let key = (try? getAttr(StaticKey())) as? EC2Key {
-            return key
+    /// The peer's static key for ECDH-SS decryption.
+    ///
+    /// The sender is authenticated by its static key, so the key the
+    /// application configured in `localAttrs` wins. A static key in the
+    /// message must then be the same key, or this throws. Only when the
+    /// application configured none is the key from the message used, and
+    /// the caller must then decide whether to trust that sender itself.
+    func peerStaticKey() throws -> EC2Key? {
+        let header = (try? getAttr(StaticKey())) as? EC2Key
+        guard let trusted = localAttrs[StaticKey()] as? EC2Key else {
+            return header
         }
-        return localAttrs[StaticKey()] as? EC2Key
+        if let header, header.curve.identifier != trusted.curve.identifier || header.x != trusted.x || header.y != trusted.y {
+            throw CoseError.invalidKey("The static key in the message is not the configured sender key.")
+        }
+        return trusted
     }
     
     /// For static-static key agreement, adds the sender's public key to the
@@ -281,7 +289,7 @@ public class CoseRecipient: CoseMessage {
         let suppPub = try SuppPubInfo(
             keyDataLength: keyLength,
             protected: self.phdr,
-            protectedEncoded: self.phdrEncoded,
+            protectedEncoded: try self.protectedHeaderBytes(),
             other: suppPubOther
         )
         

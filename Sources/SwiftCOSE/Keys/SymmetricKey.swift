@@ -25,29 +25,8 @@ public class CoseSymmetricKey: CoseKey {
     static let validKeyLengths: Set<Int> = [16, 24, 32, 48, 64]
 
     // Supported key operations
-    private var _keyOps: [KeyOps] = []
-    public override var keyOps: [KeyOps] {
-        get {
-            return store[KpKeyOps()] as? [KeyOps] ?? []
-        }
-        set {
-            let supportedOps: [KeyOps.Type] = [
-                MacCreateOp.self,
-                MacVerifyOp.self,
-                EncryptOp.self,
-                DecryptOp.self,
-                UnwrapOp.self,
-                WrapOp.self
-            ]
-            
-            for ops in newValue {
-                // Check if the operation is supported by the key type
-                guard supportedOps.contains(where: { $0 == type(of: ops) }) else {
-                    fatalError("Invalid COSE key operation \(ops) for key type \(CoseSymmetricKey.self)")
-                }
-            }
-            _keyOps = newValue
-        }
+    public override class var supportedKeyOps: [KeyOps.Type] {
+        [MacCreateOp.self, MacVerifyOp.self, EncryptOp.self, DecryptOp.self, UnwrapOp.self, WrapOp.self]
     }
     
     // MARK: - Initialization Methods
@@ -62,6 +41,10 @@ public class CoseSymmetricKey: CoseKey {
         // Transform optional parameters
         for (key, value) in optionalParams {
             let kp = try SymmetricKeyParam.fromId(for: key)
+            if kp is KpKeyOps {
+                transformedDict[kp] = try CoseKey.parseKeyOps(value, for: CoseSymmetricKey.self)
+                continue
+            }
             if let parser = kp.valueParser {
                 if let value = value as? Array<Any> {
                     for (_, v) in value.enumerated() {

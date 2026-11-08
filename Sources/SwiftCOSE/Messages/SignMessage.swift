@@ -90,8 +90,8 @@ public class CoseSignMessage: CoseMessage {
     /// - Returns: The encoded message as Data.
     public func encode(tag: Bool = true, detachedPayload: Data? = nil) throws -> Data {
         var cborMessage: [CBOR] = []
-        cborMessage.append(CBOR.byteString(phdrEncoded))
-        cborMessage.append(CBOR.fromAny(uhdrEncoded))
+        cborMessage.append(CBOR.byteString(try protectedHeaderBytes()))
+        cborMessage.append(try CBOR.fromCoseValue(uhdrEncoded))
         // RFC 9052, section 2: a detached payload is sent as nil.
         if detachedPayload != nil {
             cborMessage.append(CBOR.null)

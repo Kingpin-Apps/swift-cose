@@ -61,28 +61,9 @@ public class EC2Key: CoseKey {
     }
     
     // MARK: - Key Operations
-    private var _keyOps: [KeyOps] = []
-    public override var keyOps: [KeyOps] {
-        get {
-            return _keyOps as [KeyOps]
-        }
-        set {
-            for ops in newValue {
-                if !supportedOps.contains(where: { $0 == type(of: ops) }) {
-                    fatalError("Invalid COSE key operation \(ops) for key type \(EC2Key.self)")
-                }
-            }
-            _keyOps = newValue 
-        }
+    public override class var supportedKeyOps: [KeyOps.Type] {
+        [SignOp.self, VerifyOp.self, DeriveKeyOp.self, DeriveBitsOp.self]
     }
-    
-    // MARK: - Supported Key Operations
-    private let supportedOps: [KeyOps.Type] = [
-        SignOp.self,
-        VerifyOp.self,
-        DeriveKeyOp.self,
-        DeriveBitsOp.self
-    ]
     
     // MARK: - Helpers
     
@@ -135,6 +116,10 @@ public class EC2Key: CoseKey {
         // Transform optional parameters
         for (key, value) in optionalParams {
             let kp = try EC2KeyParam.fromId(for: key)
+            if kp is KpKeyOps {
+                transformedDict[kp] = try CoseKey.parseKeyOps(value, for: EC2Key.self)
+                continue
+            }
             if let parser = kp.valueParser {
                 transformedDict[kp] = try parser(value)
             } else {
@@ -147,8 +132,9 @@ public class EC2Key: CoseKey {
             throw CoseError.invalidKey("Illegal key type in EC2 COSE Key: \(String(describing: transformedDict[KpKty()]))")
         }
         
-        guard x != nil || y != nil || d != nil else {
-            throw CoseError.invalidKey("Either the public values or the private value must be specified")
+        // y alone cannot define the point, so a public key needs x.
+        guard x != nil || d != nil else {
+            throw CoseError.invalidKey("Either the public x value or the private value must be specified")
         }
         
         self.optionalParams = transformedDict

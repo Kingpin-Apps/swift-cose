@@ -18,7 +18,7 @@ public class EncCommon: CoseMessage {
     private var encStructure: Data {
         get throws {
             var structure: [CBOR] = [CBOR.textString(context)]
-            baseStructure(&structure)
+            try baseStructure(&structure)
             return try CBORSerialization.data(from: .array(structure))
         }
     }

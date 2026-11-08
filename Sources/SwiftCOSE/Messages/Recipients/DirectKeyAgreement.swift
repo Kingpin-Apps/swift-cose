@@ -107,8 +107,8 @@ public class DirectKeyAgreement: CoseRecipient {
         }
         
         var recipient: [CBOR] = [
-            CBOR.byteString(phdrEncoded),
-            CBOR.fromAny(uhdrEncoded),
+            CBOR.byteString(try protectedHeaderBytes()),
+            try CBOR.fromCoseValue(uhdrEncoded),
             CBOR.byteString(Data())
         ]
 
@@ -162,7 +162,7 @@ public class DirectKeyAgreement: CoseRecipient {
                     .ecdhSS_HKDF_512
                 ]
                 if algs.contains(algId) {
-                    peerKeyValue = peerStaticKey()
+                    peerKeyValue = try peerStaticKey()
                 } else {
                     peerKeyValue = try getAttr(EphemeralKey())
                 }

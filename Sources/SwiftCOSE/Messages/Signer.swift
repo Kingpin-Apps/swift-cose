@@ -58,8 +58,8 @@ public class CoseSignature: SignCommon {
         // both the body and the signer protected headers, even when empty.
         var signStructure: [CBOR] = [
             CBOR.textString(parent.context),
-            CBOR.byteString(parent.phdrEncoded),
-            CBOR.byteString(phdrEncoded),
+            CBOR.byteString(try parent.protectedHeaderBytes()),
+            CBOR.byteString(try protectedHeaderBytes()),
             CBOR.byteString(externalAAD)
         ]
         
@@ -85,8 +85,8 @@ public class CoseSignature: SignCommon {
         let computedSignature = try self.computeSignature(detachedPayload: detachedPayload)
         self.signature = computedSignature
         return [
-            CBOR.byteString(phdrEncoded),
-            CBOR.fromAny(uhdrEncoded),
+            CBOR.byteString(try protectedHeaderBytes()),
+            try CBOR.fromCoseValue(uhdrEncoded),
             CBOR.byteString(computedSignature)
         ]
     }

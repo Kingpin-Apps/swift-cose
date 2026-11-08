@@ -71,8 +71,8 @@ public class Sign1Message: SignCommon {
         if sign {
             let computedSignature = try self.computeSignature(detachedPayload: detachedPayload)
             cborMessage = [
-                CBOR.byteString(phdrEncoded),
-                CBOR.fromAny(uhdrEncoded),
+                CBOR.byteString(try protectedHeaderBytes()),
+                try CBOR.fromCoseValue(uhdrEncoded),
                 payloadItem,
                 CBOR.byteString(computedSignature),
             ]
@@ -82,8 +82,8 @@ public class Sign1Message: SignCommon {
                 throw CoseError.valueError("No signature to encode; use sign: true or set signature.")
             }
             cborMessage = [
-                CBOR.byteString(phdrEncoded),
-                CBOR.fromAny(uhdrEncoded),
+                CBOR.byteString(try protectedHeaderBytes()),
+                try CBOR.fromCoseValue(uhdrEncoded),
                 payloadItem,
                 CBOR.byteString(signature),
             ]
@@ -106,7 +106,7 @@ public class Sign1Message: SignCommon {
     /// Computes the signature structure that needs to be signed.
     public override func createSignatureStructure(detachedPayload: Data? = nil) throws -> Data {
         var sigStructure: [CBOR] = [CBOR.textString(context)]
-        baseStructure(&sigStructure)
+        try baseStructure(&sigStructure)
 
         if detachedPayload == nil {
             guard let payload = self.payload else {

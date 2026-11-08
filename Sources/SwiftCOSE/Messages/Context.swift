@@ -61,7 +61,7 @@ public struct SuppPubInfo {
         } else if protected.isEmpty {
             protectedBytes = Data()
         } else {
-            protectedBytes = try CBORSerialization.data(from: .map(protected.mapKeysToCbor))
+            protectedBytes = try CBORSerialization.data(from: .map(try protected.mapKeysToCbor()))
         }
         
         var info: [CBOR] = [

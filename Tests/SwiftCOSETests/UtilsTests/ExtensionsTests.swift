@@ -110,7 +110,7 @@ struct ExtensionsTests {
     @Test
     func testMapKeysToCBOR() async throws {
         let dictionary: [AnyHashable: Any] = ["key": "value", 1: 42]
-        let cborDict = dictionary.mapKeysToCbor
+        let cborDict = try dictionary.mapKeysToCbor()
         
         #expect(cborDict[CBOR("key")] == CBOR.textString("value"))
         #expect(cborDict[CBOR.unsignedInt(1)] == CBOR.unsignedInt(42))

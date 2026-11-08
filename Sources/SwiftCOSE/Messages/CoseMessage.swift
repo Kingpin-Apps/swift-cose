@@ -254,12 +254,10 @@ public class CoseMessage: CoseBase, CustomStringConvertible {
         }
     }
 
-    public func baseStructure(_ structure: inout [CBOR]) {
-        if phdr.isEmpty {
-            structure.append(CBOR.byteString(Data()))
-        } else {
-            structure.append(CBOR.byteString(phdrEncoded))
-        }
+    public func baseStructure(_ structure: inout [CBOR]) throws {
+        // Always the protected bytes as received (or as encoded here), so
+        // a received h'A0' is not rewritten to h'' (RFC 9052 section 4.4).
+        structure.append(CBOR.byteString(try protectedHeaderBytes()))
 
         structure.append(CBOR.byteString(externalAAD))
     }

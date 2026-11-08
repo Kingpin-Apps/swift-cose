@@ -34,7 +34,7 @@ struct AesCcmAlgorithmTests {
         let key = try CoseSymmetricKey.generateKey(
             keyLength: aesCcm.keyLength!
         )
-        let iv = "1234567890ABCDEF12345678".hexStringToData
+        let iv = "1234567890ABCDEF1234567801".hexStringToData  // CCM-16-* takes a 13-byte nonce
         let plaintext = "CCM 256-bit key test.".data(using: .utf8)!
         let aad = "AAD".data(using: .utf8)!
         
@@ -59,7 +59,7 @@ struct AesCcmAlgorithmTests {
         let key = try CoseSymmetricKey.generateKey(
             keyLength: aesCcm.keyLength!
         )
-        let iv = "A1B2C3D4E5F6071829304050".hexStringToData
+        let iv = "A1B2C3D4E5F607".hexStringToData  // CCM-64-* takes a 7-byte nonce
         let plaintext = "AES CCM 64 64 128 test.".data(using: .utf8)!
         let aad = "AAD6464128".data(using: .utf8)!
         
@@ -84,7 +84,7 @@ struct AesCcmAlgorithmTests {
         let key = try CoseSymmetricKey.generateKey(
             keyLength: aesCcm.keyLength!
         )
-        let iv = "0011AABBCCDDEEFF99887766".hexStringToData
+        let iv = "0011AABBCCDDEE".hexStringToData  // CCM-64-* takes a 7-byte nonce
         let plaintext = "AES CCM 64 64 256 test.".data(using: .utf8)!
         let aad = "AAD6464256".data(using: .utf8)!
         
@@ -109,7 +109,7 @@ struct AesCcmAlgorithmTests {
         let key = try CoseSymmetricKey.generateKey(
             keyLength: aesCcm.keyLength!
         )
-        let iv = "DEADBEEFCAFEBABE11223344".hexStringToData
+        let iv = "DEADBEEFCAFEBABE1122334401".hexStringToData  // CCM-16-* takes a 13-byte nonce
         let plaintext = "AES CCM 16 128 128 test.".data(using: .utf8)!
         let aad = "AAD16128128".data(using: .utf8)!
         
@@ -134,7 +134,7 @@ struct AesCcmAlgorithmTests {
         let key = try CoseSymmetricKey.generateKey(
             keyLength: aesCcm.keyLength!
         )
-        let iv = "CAFED00DBEEF001122334455".hexStringToData
+        let iv = "CAFED00DBEEF00112233445501".hexStringToData  // CCM-16-* takes a 13-byte nonce
         let plaintext = "AES CCM 16 128 256 test.".data(using: .utf8)!
         let aad = "AAD16128256".data(using: .utf8)!
         
@@ -159,7 +159,7 @@ struct AesCcmAlgorithmTests {
         let key = try CoseSymmetricKey.generateKey(
             keyLength: aesCcm.keyLength!
         )
-        let iv = "33445566778899AABBCCDDEE".hexStringToData
+        let iv = "33445566778899".hexStringToData  // CCM-64-* takes a 7-byte nonce
         let plaintext = "AES CCM 64 128 128 test.".data(using: .utf8)!
         let aad = "AAD64128128".data(using: .utf8)!
         
@@ -184,7 +184,7 @@ struct AesCcmAlgorithmTests {
         let key = try CoseSymmetricKey.generateKey(
             keyLength: aesCcm.keyLength!
         )
-        let iv = "112233445566778899AABBCC".hexStringToData
+        let iv = "11223344556677".hexStringToData  // CCM-64-* takes a 7-byte nonce
         let plaintext = "AES CCM 64 128 256 test.".data(using: .utf8)!
         let aad = "AAD64128256".data(using: .utf8)!
         

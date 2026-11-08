@@ -59,7 +59,7 @@ struct Mac0MessageTests {
             Algorithm(): A256GCM().identifier!,
             IV(): Data([0x05, 0x06, 0x07, 0x08])
         ]
-        let protectedHdrMap = CBOR.map(phdr.mapKeysToCbor)
+        let protectedHdrMap = CBOR.map(try phdr.mapKeysToCbor())
         let encoded = try CBORSerialization.data(from: protectedHdrMap)
         
         let coseArray: [CBOR] = [

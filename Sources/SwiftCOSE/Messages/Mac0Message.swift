@@ -62,8 +62,8 @@ public class Mac0Message: MacCommon {
         if mac {
             let computedTag = try self.computeTag()
             message = [
-                CBOR.byteString(phdrEncoded),
-                CBOR.fromAny(uhdrEncoded),
+                CBOR.byteString(try protectedHeaderBytes()),
+                try CBOR.fromCoseValue(uhdrEncoded),
                 payload.map { CBOR.byteString($0) } ?? CBOR.null,
                 CBOR.byteString(computedTag)
             ]
@@ -74,8 +74,8 @@ public class Mac0Message: MacCommon {
                 throw CoseError.valueError("No authentication tag to encode; use mac: true or set authTag.")
             }
             message = [
-                CBOR.byteString(phdrEncoded),
-                CBOR.fromAny(uhdrEncoded),
+                CBOR.byteString(try protectedHeaderBytes()),
+                try CBOR.fromCoseValue(uhdrEncoded),
                 payload.map { CBOR.byteString($0) } ?? CBOR.null,
                 CBOR.byteString(authTag)
             ]

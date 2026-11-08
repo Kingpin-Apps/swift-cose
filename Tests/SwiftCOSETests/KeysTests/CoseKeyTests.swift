@@ -23,7 +23,8 @@ struct CoseKeyTests {
         #expect(coseKey.alg == EdDSAAlgorithm())
         #expect(coseKey.kid == Data([0x01, 0x02]))
         #expect(coseKey.baseIV == Data([0x03, 0x04]))
-        #expect(coseKey.keyOps == [])
+        #expect(coseKey.keyOps == [EncryptOp(), DecryptOp()])
+        #expect(coseKey.hasKeyOps)
     }
     
     @Test
@@ -34,7 +35,7 @@ struct CoseKeyTests {
             KpKty(): KtyOKP(),
             OKPKpCurve(): Ed25519Curve(),
             KpKeyOps(): [SignOp(), VerifyOp()],
-            OKPKpX(): verificationKeyData
+            OKPKpX(): Data(hexString: verificationKeyData)!
         ] as [AnyHashable : Any]
 
         let coseKey = try CoseKey.fromDictionary(coseKeyDict)
@@ -65,10 +66,12 @@ struct CoseKeyTests {
     }
     
     @Test
-    func testKeyOpsEmpty() async throws {
+    func testKeyOpsKept() async throws {
+        // key_ops used to be dropped at init, so they were never enforced.
         let coseKey = CoseKey(keyDict: [KpKeyOps(): [EncryptOp(), DecryptOp()]])
         
-        #expect(coseKey.keyOps.isEmpty)
+        #expect(coseKey.keyOps == [EncryptOp(), DecryptOp()])
+        #expect(CoseKey(keyDict: [:]).hasKeyOps == false)
     }
     
     // MARK: - Encode and Decode Tests

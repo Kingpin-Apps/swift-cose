@@ -56,7 +56,7 @@ struct CoseSignatureTests {
         let phdr: OrderedDictionary<CoseHeaderAttribute, Any> = [
             Algorithm(): Es256().identifier!
         ]
-        let protectedHdrMap = CBOR.map(phdr.mapKeysToCbor)
+        let protectedHdrMap = CBOR.map(try phdr.mapKeysToCbor())
         let encoded = try CBORSerialization.data(from: protectedHdrMap)
         
         let coseArray: [CBOR] = [

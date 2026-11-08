@@ -63,6 +63,13 @@ public class KeyOps: CoseAttribute {
                 }
                 return getInstance(for: op)
                 
+            case let id as any BinaryInteger:
+                // CBOR integers can decode as UInt64 or Int64.
+                guard let value = Int(exactly: id), let op = KeyOpsIdentifier(rawValue: value) else {
+                    throw CoseError.invalidKeyOps("Unknown operation identifier")
+                }
+                return getInstance(for: op)
+
             case let name as String:
                 // If the identifier is a String, attempt to match it to a KeyOpsIdentifier
                 guard let op = KeyOpsIdentifier.fromFullName(name) else {

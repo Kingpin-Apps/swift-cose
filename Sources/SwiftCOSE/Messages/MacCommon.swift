@@ -27,7 +27,7 @@ public class MacCommon: CoseMessage {
             // RFC 9052, section 6.3:
             // MAC_structure = [context, protected, external_aad, payload]
             var structure: [CBOR] = [CBOR.textString(context)]
-            baseStructure(&structure)
+            try baseStructure(&structure)
             structure.append(CBOR.byteString(payload))
             return try CBORSerialization.data(from: .array(structure))
         }

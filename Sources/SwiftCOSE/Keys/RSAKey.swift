@@ -96,28 +96,8 @@ public class RSAKey: CoseKey {
     }
     
     // MARK: - Key Operations
-    private var _keyOps: [KeyOps] = []
-    
-    public override var keyOps: [KeyOps] {
-        get {
-            return _keyOps as [KeyOps]
-        }
-        set {
-            let supportedOps: [KeyOps.Type] = [
-                SignOp.self,
-                VerifyOp.self,
-                DeriveKeyOp.self,
-                DeriveBitsOp.self
-            ]
-            
-            for ops in newValue {
-                // Check if the operation is supported by the key type
-                guard supportedOps.contains(where: { $0 == type(of: ops) }) else {
-                    fatalError("Invalid COSE key operation \(ops) for key type \(RSAKey.self)")
-                }
-            }
-            _keyOps = newValue 
-        }
+    public override class var supportedKeyOps: [KeyOps.Type] {
+        [SignOp.self, VerifyOp.self, DeriveKeyOp.self, DeriveBitsOp.self]
     }
     
     // MARK: - Initialization Methods
@@ -138,13 +118,22 @@ public class RSAKey: CoseKey {
     ) throws {
         var transformedDict: [AnyHashable: Any] = [KpKty(): KtyRSA()]
         
-        let isPublicKey = !n!.isEmpty && !e!.isEmpty && ((d?.isEmpty) != nil) && p == nil && q == nil && dp == nil && dq == nil && qInv == nil && other.isEmpty && ((r_i?.isEmpty) != nil) && ((d_i?.isEmpty) != nil) && (
-            (t_i?.isEmpty) != nil
-        )
+        // A component counts as present only when it is non-empty; nothing
+        // here is force-unwrapped, so a malformed key throws instead of
+        // trapping.
+        func has(_ value: Data?) -> Bool { value.map { !$0.isEmpty } ?? false }
+        guard has(n), has(e) else {
+            throw CoseError.invalidKey("An RSA key needs n and e")
+        }
+        // A private key needs d, p and q; dP, dQ and qInv are optional,
+        // as before (the primes are what the signer uses).
+        let crt = [p, q, dp, dq, qInv].map(has)
+        let primes = has(p) && has(q)
+        let extra = [r_i, d_i, t_i].map(has)
 
-        let isPrivateKeyTwoPrimes = !n!.isEmpty && !e!.isEmpty && !d!.isEmpty && p != nil && q != nil && dp != nil && dq != nil && qInv != nil && other.isEmpty && r_i!.isEmpty && d_i!.isEmpty && t_i!.isEmpty
-
-        let isPrivateKeyMultiplePrimes = !n!.isEmpty && !e!.isEmpty && !d!.isEmpty && p != nil && q != nil && dp != nil && dq != nil && qInv != nil && !other.isEmpty && !r_i!.isEmpty && !d_i!.isEmpty && !t_i!.isEmpty
+        let isPublicKey = !has(d) && !crt.contains(true) && other.isEmpty && !extra.contains(true)
+        let isPrivateKeyTwoPrimes = has(d) && primes && other.isEmpty && !extra.contains(true)
+        let isPrivateKeyMultiplePrimes = has(d) && primes && !other.isEmpty && !extra.contains(false)
 
         guard isPublicKey || isPrivateKeyTwoPrimes || isPrivateKeyMultiplePrimes else {
             throw CoseError.invalidKey("Invalid RSA key")
@@ -158,6 +147,10 @@ public class RSAKey: CoseKey {
         // Transform optional parameters
         for (key, value) in optionalParams {
             let kp = try RSAKeyParam.fromId(for: key)
+            if kp is KpKeyOps {
+                transformedDict[kp] = try CoseKey.parseKeyOps(value, for: RSAKey.self)
+                continue
+            }
             if let parser = kp.valueParser {
                 transformedDict[kp] = try parser(value)
             } else {
@@ -350,19 +343,30 @@ public class RSAKey: CoseKey {
         CoseKey.removeFromDict(&optionalParams, parameter: RSAKpDi())
         CoseKey.removeFromDict(&optionalParams, parameter: RSAKpTi())
         
+        // Every component must be a byte string. A value of another type
+        // used to become nil here and then trap in init.
+        func component(_ value: Any) throws -> Data? {
+            guard let data = value as? Data else {
+                throw CoseError.invalidKey("RSA key components must be byte strings")
+            }
+            return data.isEmpty ? nil : data
+        }
+        guard let otherPrimes = other as? [[String: Any]] else {
+            throw CoseError.invalidKey("RSA key 'other' must be an array of maps")
+        }
         return try RSAKey(
-            n: n as? Data,
-            e: e as? Data,
-            d: d as? Data,
-            p: p as? Data,
-            q: q as? Data,
-            dp: dp as? Data,
-            dq: dq as? Data,
-            qInv: qInv as? Data,
-            other: other as? [[String: Any]] ?? [],
-            r_i: r_i as? Data,
-            d_i: d_i as? Data,
-            t_i: t_i as? Data,
+            n: try component(n),
+            e: try component(e),
+            d: try component(d),
+            p: try component(p),
+            q: try component(q),
+            dp: try component(dp),
+            dq: try component(dq),
+            qInv: try component(qInv),
+            other: otherPrimes,
+            r_i: try component(r_i),
+            d_i: try component(d_i),
+            t_i: try component(t_i),
             optionalParams: optionalParams
         )
     }

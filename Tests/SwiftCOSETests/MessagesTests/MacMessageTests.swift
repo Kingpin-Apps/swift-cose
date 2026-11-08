@@ -61,7 +61,7 @@ struct MacMessageTests {
             Algorithm(): AESMAC12864().identifier!,
             IV(): Data([0x05, 0x06, 0x07, 0x08])
         ]
-        let protectedHdrMap = CBOR.map(phdr.mapKeysToCbor)
+        let protectedHdrMap = CBOR.map(try phdr.mapKeysToCbor())
         let encoded = try CBORSerialization.data(from: protectedHdrMap)
         
         let recipient: [CBOR] = [
@@ -109,7 +109,7 @@ struct MacMessageTests {
         
         let payload = Data("Encoding Test".utf8)
         let symmetricKey = try CoseSymmetricKey(k: Data.randomBytes(count: 32))
-        let recipient = DirectEncryption(phdr: phdr, uhdr: uhdr, payload: Data("recipient data".utf8))
+        let recipient = DirectEncryption(uhdr: [Algorithm(): Direct()])
         
         let macMessage = MacMessage(
             phdr: phdr,

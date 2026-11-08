@@ -59,23 +59,28 @@ public class CoseBase {
     /// - Throws: An error if CBOR encoding fails.
     public var phdrEncoded: Data {
         get {
-            if let encoded = _phdrEncoded {
-                return encoded
-            }
-            
-            guard !phdr.isEmpty else { return Data() }
-
             do {
-                // Convert `_phdr` to a CBOR.Map by mapping its keys and values
-                let protectedHdrMap = CBOR.map(_phdr.mapKeysToCbor)
-                
-                let encoded = try CBORSerialization.data(from: protectedHdrMap)
-                _phdrEncoded = encoded
-                return encoded
+                return try protectedHeaderBytes()
             } catch {
+                // Encoding a message goes through protectedHeaderBytes()
+                // and throws first; only a direct read of this property
+                // with a header value that has no CBOR form gets here.
                 fatalError("Failed to encode protected header: \(error)")
             }
         }
+    }
+
+    /// The protected header bytes: as received for a decoded message,
+    /// otherwise the encoded `phdr` (empty when there is none).
+    /// - Throws: When a header value has no CBOR form.
+    public func protectedHeaderBytes() throws -> Data {
+        if let encoded = _phdrEncoded {
+            return encoded
+        }
+        guard !phdr.isEmpty else { return Data() }
+        let encoded = try CBORSerialization.data(from: CBOR.map(try _phdr.mapKeysToCbor()))
+        _phdrEncoded = encoded
+        return encoded
     }
 
     // MARK: - Encoded Unprotected Header (uhdrEncoded)

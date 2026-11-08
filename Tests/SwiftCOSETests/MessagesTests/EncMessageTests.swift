@@ -56,7 +56,7 @@ struct EncMessageTests {
     @Test func testEncode() async throws {
         let phdr: OrderedDictionary<CoseHeaderAttribute, Any> = [
             Algorithm(): A128GCM(),
-            IV(): Data([0x11, 0x12, 0x13, 0x14])
+            IV(): Data([0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C])
         ]
         
         let uhdr: OrderedDictionary<CoseHeaderAttribute, Any> = [
@@ -65,11 +65,7 @@ struct EncMessageTests {
         
         let payload = Data("Encoding Test".utf8)
         let symmetricKey = try CoseSymmetricKey(k: Data.randomBytes(count: 16))
-        let recipient = DirectEncryption(
-            phdr: phdr,
-            uhdr: uhdr,
-            payload: Data([0xAA])
-        )
+        let recipient = DirectEncryption(uhdr: [Algorithm(): Direct()])
 
         let encMessage = EncMessage(
             phdr: phdr,
@@ -122,7 +118,7 @@ struct EncMessageTests {
     @Test func testDecryption() async throws {
         let phdr: OrderedDictionary<CoseHeaderAttribute, Any> = [
             Algorithm(): A128GCM(),
-            IV(): Data([0x11, 0x12, 0x13, 0x14])
+            IV(): Data([0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C])
         ]
         
         let uhdr: OrderedDictionary<CoseHeaderAttribute, Any> = [
@@ -131,11 +127,7 @@ struct EncMessageTests {
         
         let payload = Data("Encoding Test".utf8)
         let symmetricKey = try CoseSymmetricKey(k: Data.randomBytes(count: 16))
-        let recipient = DirectEncryption(
-            phdr: phdr,
-            uhdr: uhdr,
-            payload: Data([0xAA])
-        )
+        let recipient = DirectEncryption(uhdr: [Algorithm(): Direct()])
 
         let encMessage = EncMessage(
             phdr: phdr,

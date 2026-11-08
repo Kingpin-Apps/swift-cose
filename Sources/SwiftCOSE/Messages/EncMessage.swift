@@ -93,14 +93,14 @@ public class EncMessage: EncCommon {
         if encrypt {
             let encrypted = try self.encrypt()
             message = [
-                CBOR.byteString(phdrEncoded),
-                CBOR.fromAny(uhdrEncoded),
+                CBOR.byteString(try protectedHeaderBytes()),
+                try CBOR.fromCoseValue(uhdrEncoded),
                 CBOR.byteString(encrypted)
             ]
         } else {
             message = [
-                CBOR.byteString(phdrEncoded),
-                CBOR.fromAny(uhdrEncoded),
+                CBOR.byteString(try protectedHeaderBytes()),
+                try CBOR.fromCoseValue(uhdrEncoded),
                 payload.map { CBOR.byteString($0) } ?? CBOR.null
             ]
         }
@@ -130,6 +130,7 @@ public class EncMessage: EncCommon {
         let recipientTypes = try CoseRecipient.verifyRecipients(recipients)
         
         if recipientTypes.contains(describe(DirectEncryption.self)) {
+            try DirectEncryption.requirePlainDirect(recipients)
             return try super.encrypt()
         } else if recipientTypes.contains(describe(DirectKeyAgreement.self)) {
             self.key = try recipients.first?
@@ -183,6 +184,7 @@ public class EncMessage: EncCommon {
         let recipientTypes = try CoseRecipient.verifyRecipients(recipients)
         
         if recipientTypes.contains(describe(DirectEncryption.self)) {
+            try DirectEncryption.requirePlainDirect(recipients)
             return try super.decrypt()
         } else if recipientTypes.contains(describe(DirectKeyAgreement.self)) || recipientTypes.contains(describe(KeyWrap.self)) || recipientTypes.contains(describe(KeyAgreementWithKeyWrap.self)) {
             self.key = try recipient

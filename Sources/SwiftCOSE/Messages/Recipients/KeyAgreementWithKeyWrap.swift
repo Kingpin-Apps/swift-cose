@@ -85,9 +85,9 @@ public class KeyAgreementWithKeyWrap: CoseRecipient {
             try includeStaticSenderKey()
         }
         var recipient: [CBOR] = [
-            CBOR.byteString(phdrEncoded),
-            CBOR.fromAny(uhdrEncoded),
-            CBOR.fromAny(encrypted)
+            CBOR.byteString(try protectedHeaderBytes()),
+            try CBOR.fromCoseValue(uhdrEncoded),
+            try CBOR.fromCoseValue(encrypted)
         ]
         
         if !recipients.isEmpty {
@@ -148,6 +148,10 @@ public class KeyAgreementWithKeyWrap: CoseRecipient {
         guard let localKey = key as? EC2Key else {
             throw CoseError.invalidKey("The sender key must be an EC2 key.")
         }
+        if let peerEC2Key = peerKey as? EC2Key {
+            try peerEC2Key.verify(keyType: EC2Key.self, algorithm: alg, keyOps: [DeriveKeyOp(), DeriveBitsOp()])
+        }
+        try localKey.verify(keyType: EC2Key.self, algorithm: alg, keyOps: [DeriveKeyOp(), DeriveBitsOp()])
         guard let wrapFunc = alg.keyWrapFunction as? AesKwAlgorithm else {
             throw CoseError.invalidAlgorithm("Algorithm \(alg) has no AES key wrap function.")
         }
@@ -164,7 +168,7 @@ public class KeyAgreementWithKeyWrap: CoseRecipient {
                 k: keyBytes,
                 optionalParams: [
                     KpAlg(): alg,
-                    KpKeyOps(): [DeriveKeyOp()]
+                    KpKeyOps(): [WrapOp()]
                 ]),
             data: payload
         )
@@ -195,7 +199,7 @@ public class KeyAgreementWithKeyWrap: CoseRecipient {
             }
             peerKey = ephermalKey
         } else if needsStaticKey.contains(algId) {
-            guard let staticKey = peerStaticKey() else {
+            guard let staticKey = try peerStaticKey() else {
                 throw CoseError.invalidMessage("Static key is required.")
             }
             peerKey = staticKey
@@ -208,6 +212,11 @@ public class KeyAgreementWithKeyWrap: CoseRecipient {
         guard let peerEC2Key = peerKey as? EC2Key, let localKey = key as? EC2Key else {
             throw CoseError.invalidKey("Key agreement needs EC2 keys on both sides.")
         }
+        // Check the caller's key (and the peer's) against this algorithm,
+        // as DirectKeyAgreement does, so a key bound to another algorithm
+        // or use is refused.
+        try peerEC2Key.verify(keyType: EC2Key.self, algorithm: alg, keyOps: [DeriveKeyOp(), DeriveBitsOp()])
+        try localKey.verify(keyType: EC2Key.self, algorithm: alg, keyOps: [DeriveKeyOp(), DeriveBitsOp()])
         guard let unwrapFunc = alg.keyWrapFunction as? AesKwAlgorithm else {
             throw CoseError.invalidAlgorithm("Algorithm \(alg) has no AES key wrap function.")
         }
