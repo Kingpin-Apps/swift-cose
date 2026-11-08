@@ -1,5 +1,5 @@
 {
-  "originHash" : "4954639ffd7c92584f18a15fa2028080588c5c143535b757ec676c923c079b06",
+  "originHash" : "4efd84548bdf95ea71728dc27f2bee9891b304b8d70536b85a424d6df4db1275",
   "pins" : [
     {
       "identity" : "bigint",
@@ -42,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/Kingpin-Apps/swift-cbor-codable.git",
       "state" : {
-        "revision" : "033d1cc3b0a055f28a65d4301d6aa751ec06fbd2",
-        "version" : "0.5.0"
+        "revision" : "69ba1b0ec649e3f8e4b52f5dc6ce77ddc6178285",
+        "version" : "0.6.0"
       }
     },
     {

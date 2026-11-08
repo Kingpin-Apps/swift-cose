@@ -77,6 +77,13 @@ public enum CBORSerialization {
                     map[key] = try decodeRejectingDuplicateKeys(&reader, depth: depth + 1)
                 }
                 return .map(map)
+            case .byteString, .textString:
+                // A definite string can't be longer than what is left. Checking
+                // here keeps a length near Int.max away from the reader.
+                guard head.argument <= UInt64(probe.remaining) else {
+                    throw CoseError.invalidMessage("CBOR length exceeds the input")
+                }
+                return try reader.decode()
             case .tagged:
                 reader = probe
                 return .tagged(head.argument, try decodeRejectingDuplicateKeys(&reader, depth: depth + 1))
